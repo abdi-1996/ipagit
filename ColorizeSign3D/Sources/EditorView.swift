@@ -2,44 +2,20 @@ import SwiftUI
 import PhotosUI
 import UIKit
 
-private enum ThreeDTool: String, CaseIterable, Identifiable {
-    case camera = "Камера"
-    case sign = "Буквы"
-    case facade = "Фасад"
-
-    var id: String { rawValue }
-
-    var symbol: String {
-        switch self {
-        case .camera: return "camera.viewfinder"
-        case .sign: return "textformat"
-        case .facade: return "building.2"
-        }
-    }
-}
-
 struct EditorView: View {
     @State private var document = LetteringDocument()
     @State private var selectedID: UUID?
-    @State private var mode: EditorMode = .twoD
     @State private var section: InspectorSection = .text
-    @State private var rendered = false
+    @State private var displayMode: DisplayMode = .twoD
     @State private var photoItem: PhotosPickerItem?
     @State private var facadeImage: UIImage?
     @State private var showInspector = true
-    @State private var threeDTool: ThreeDTool = .camera
-
-    @State private var activeDragID: UUID?
+    @State private var canvasZoom: CGFloat = 1
+    @State private var canvasPan: CGSize = .zero
     @State private var dragOrigin = CGPoint.zero
-    @State private var activeScaleID: UUID?
-    @State private var scaleOrigin = 1.0
+    @State private var activeDragID: UUID?
 
-    @State private var facadeOffset: CGSize = .zero
-    @State private var facadeDragOrigin: CGSize = .zero
-    @State private var facadeDragging = false
-    @State private var facadeScale = 1.0
-    @State private var facadeScaleOrigin = 1.0
-    @State private var facadeScaling = false
+    private enum DisplayMode { case twoD, solid3D, render, view3D }
 
     var body: some View {
         NavigationStack {
@@ -51,10 +27,7 @@ struct EditorView: View {
             .background(Color(red: 0.055, green: 0.06, blue: 0.075).ignoresSafeArea())
             .navigationBarHidden(true)
             .preferredColorScheme(.dark)
-            .onAppear {
-                restore()
-                selectedID = selectedID ?? document.layers.first?.id
-            }
+            .onAppear { restore(); selectedID = selectedID ?? document.layers.first?.id }
             .onChange(of: document) { _, _ in save() }
             .task(id: photoItem) { await loadFacade() }
         }
@@ -62,642 +35,164 @@ struct EditorView: View {
 
     private var topBar: some View {
         VStack(spacing: 8) {
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("COLORIZE DESIGN")
-                        .font(.caption.bold())
-                        .foregroundStyle(.blue)
-                    Text("Вывески")
-                        .font(.headline)
+                    Text("COLORIZE DESIGN").font(.caption.bold()).foregroundStyle(.blue)
+                    Text("Вывески").font(.headline)
                 }
                 Spacer()
-
-                PhotosPicker(selection: $photoItem, matching: .images) {
-                    Image(systemName: "photo.on.rectangle")
-                }
-                .buttonStyle(.bordered)
-
-                if mode != .twoD {
-                    Button {
-                        withAnimation(.snappy) { rendered.toggle() }
-                    } label: {
-                        Label(rendered ? "Render ON" : "Render", systemImage: rendered ? "sparkles" : "cube")
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(rendered ? .blue : .gray)
-                }
-
-                Button {
-                    withAnimation(.snappy) { showInspector.toggle() }
-                } label: {
+                modeButton("3D", icon: "cube", mode: .solid3D)
+                modeButton("Render", icon: "sparkles", mode: .render)
+                modeButton("3D View", icon: "rotate.3d", mode: .view3D)
+                Button { withAnimation(.snappy) { showInspector.toggle() } } label: {
                     Image(systemName: "slider.horizontal.3")
-                }
-                .buttonStyle(.bordered)
+                }.buttonStyle(.bordered)
             }
-
-            Picker("Режим", selection: $mode) {
-                ForEach(EditorMode.allCases) { item in
-                    Text(item.rawValue).tag(item)
-                }
-            }
-            .pickerStyle(.segmented)
-            .onChange(of: mode) { _, newMode in
-                rendered = false
-                activeDragID = nil
-                activeScaleID = nil
-                if newMode == .threeDView {
-                    threeDTool = .camera
-                }
-            }
-
-            if mode == .threeDView {
-                Picker("Инструмент 3D View", selection: $threeDTool) {
-                    ForEach(ThreeDTool.allCases) { tool in
-                        Label(tool.rawValue, systemImage: tool.symbol).tag(tool)
-                    }
-                }
-                .pickerStyle(.segmented)
+            HStack(spacing: 10) {
+                Button { displayMode = .twoD } label: {
+                    Label("2D", systemImage: "square.on.square")
+                }.buttonStyle(.borderedProminent).tint(displayMode == .twoD ? .blue : .gray)
+                PhotosPicker(selection: $photoItem, matching: .images) {
+                    Label("Фасад", systemImage: "photo.on.rectangle")
+                }.buttonStyle(.bordered)
+                Spacer()
+                Text("\(Int(canvasZoom * 100))%").font(.caption.monospacedDigit()).foregroundStyle(.secondary)
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.top, 8)
-        .padding(.bottom, 10)
-        .background(.ultraThinMaterial)
+        .padding(.horizontal, 10).padding(.vertical, 8).background(.ultraThinMaterial)
     }
 
-    @ViewBuilder private var workspace: some View {
+    private func modeButton(_ title: String, icon: String, mode: DisplayMode) -> some View {
+        Button { displayMode = (displayMode == mode ? .twoD : mode) } label: {
+            Label(title, systemImage: icon).labelStyle(.titleAndIcon)
+        }.buttonStyle(.borderedProminent).tint(displayMode == mode ? .blue : .gray)
+    }
+
+    private var workspace: some View {
         GeometryReader { proxy in
             ZStack {
-                Color.black.opacity(0.18)
-
-                if mode == .twoD {
-                    twoDCanvas
-                        .padding(12)
+                Color(red: 0.12, green: 0.125, blue: 0.14)
+                if displayMode == .twoD {
+                    twoDCanvas(size: proxy.size)
                 } else {
-                    ZStack {
-                        Sign3DView(
-                            document: document,
-                            selectedID: selectedID,
-                            orbitContext: mode == .threeDView,
-                            cameraControlEnabled: mode == .threeDView && threeDTool == .camera,
-                            rendered: rendered,
-                            facadeImage: facadeImage,
-                            facadeOffset: facadeOffset,
-                            facadeScale: facadeScale
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-
-                        if mode == .threeD || (mode == .threeDView && threeDTool != .camera) {
-                            Color.clear
-                                .contentShape(Rectangle())
-                                .gesture(threeDEditGesture)
-                        }
-                    }
-                    .padding(12)
-                    .overlay(alignment: .topLeading) {
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text(mode == .threeD ? "3D · фиксированная камера" : "3D View · \(threeDTool.rawValue)")
-                                .font(.caption.bold())
-                            Text(rendered ? "Render: материалы · тени · подсветка" : "Solid: объём + тень, без материалов")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                            if mode == .threeD {
-                                Text("Потяните буквы для перемещения · щипок меняет размер")
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                            } else if threeDTool != .camera {
-                                Text("Потяните объект · щипок меняет его размер")
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                        .padding(10)
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
-                        .padding(24)
-                    }
-                }
-            }
-            .frame(width: proxy.size.width, height: proxy.size.height)
-        }
-    }
-
-    private var twoDCanvas: some View {
-        GeometryReader { proxy in
-            ZStack {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(Color.white)
-
-                if let facadeImage {
-                    Image(uiImage: facadeImage)
-                        .resizable()
-                        .scaledToFit()
-                        .scaleEffect(facadeScale)
-                        .offset(facadeOffset)
-                        .opacity(document.facadeOpacity)
-                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                }
-
-                ForEach(document.layers) { item in
-                    if !item.isHidden {
-                        Text(item.text)
-                            .font(.custom(item.fontName, size: CGFloat(item.fontSize)))
-                            .tracking(CGFloat(item.tracking))
-                            .foregroundStyle(Color(hex: item.fillHex))
-                            .shadow(
-                                color: Color(hex: item.shadowHex).opacity(item.shadowOpacity),
-                                radius: CGFloat(item.shadowBlur),
-                                x: CGFloat(item.shadowX),
-                                y: CGFloat(item.shadowY)
-                            )
-                            .scaleEffect(x: item.scale * item.widthScale, y: item.scale)
-                            .rotationEffect(.degrees(item.rotation))
-                            .offset(x: item.x, y: item.y)
-                            .opacity(item.opacity)
-                            .overlay {
-                                if selectedID == item.id {
-                                    RoundedRectangle(cornerRadius: 6)
-                                        .stroke(.blue, style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
-                                        .padding(-10)
-                                }
-                            }
-                            .contentShape(Rectangle())
-                            .onTapGesture { selectedID = item.id }
-                            .gesture(item.isLocked ? nil : layerGesture(item.id))
-                    }
-                }
-
-                VStack {
-                    HStack {
-                        Label("2D", systemImage: "square.on.square")
-                            .font(.caption.bold())
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(.ultraThinMaterial, in: Capsule())
-                        Spacer()
-                        if facadeImage != nil {
-                            Text("Фасад не изменяется рендером")
-                                .font(.caption2)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(.ultraThinMaterial, in: Capsule())
-                        }
-                    }
-                    Spacer()
-                }
-                .padding(12)
-            }
-            .frame(width: proxy.size.width, height: proxy.size.height)
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        }
-    }
-
-    private func layerGesture(_ id: UUID) -> some Gesture {
-        DragGesture()
-            .onChanged { value in
-                guard let i = index(id) else { return }
-                if activeDragID != id {
-                    activeDragID = id
-                    dragOrigin = CGPoint(x: document.layers[i].x, y: document.layers[i].y)
-                }
-                selectedID = id
-                document.layers[i].x = dragOrigin.x + value.translation.width
-                document.layers[i].y = dragOrigin.y + value.translation.height
-            }
-            .onEnded { _ in
-                activeDragID = nil
-            }
-            .simultaneously(with:
-                MagnificationGesture()
-                    .onChanged { value in
-                        guard let i = index(id) else { return }
-                        if activeScaleID != id {
-                            activeScaleID = id
-                            scaleOrigin = document.layers[i].scale
-                        }
-                        selectedID = id
-                        document.layers[i].scale = min(max(scaleOrigin * value, 0.15), 6.0)
-                    }
-                    .onEnded { _ in
-                        activeScaleID = nil
-                    }
-            )
-    }
-
-    private var threeDEditGesture: some Gesture {
-        DragGesture()
-            .onChanged { value in
-                if mode == .threeD || threeDTool == .sign {
-                    guard let id = selectedID, let i = index(id), !document.layers[i].isLocked else { return }
-                    if activeDragID != id {
-                        activeDragID = id
-                        dragOrigin = CGPoint(x: document.layers[i].x, y: document.layers[i].y)
-                    }
-                    document.layers[i].x = dragOrigin.x + value.translation.width
-                    document.layers[i].y = dragOrigin.y + value.translation.height
-                } else if threeDTool == .facade {
-                    if !facadeDragging {
-                        facadeDragging = true
-                        facadeDragOrigin = facadeOffset
-                    }
-                    facadeOffset = CGSize(
-                        width: facadeDragOrigin.width + value.translation.width,
-                        height: facadeDragOrigin.height + value.translation.height
+                    Sign3DView(
+                        document: document,
+                        selectedID: selectedID,
+                        orbitContext: displayMode == .view3D,
+                        cameraControlEnabled: displayMode == .view3D,
+                        rendered: displayMode == .render,
+                        facadeImage: facadeImage,
+                        facadeOffset: canvasPan,
+                        facadeScale: Double(canvasZoom)
                     )
+                    .allowsHitTesting(displayMode == .view3D)
+                    .overlay(alignment: .topLeading) {
+                        Text(displayMode == .solid3D ? "3D · тот же размер и позиция · объём + тень" : displayMode == .render ? "Render · тот же кадр · материалы + свет" : "3D View · свободное вращение")
+                            .font(.caption.bold()).padding(8).background(.ultraThinMaterial, in: Capsule()).padding(12)
+                    }
                 }
             }
-            .onEnded { _ in
-                activeDragID = nil
-                facadeDragging = false
+            .clipped()
+        }
+    }
+
+    private func twoDCanvas(size: CGSize) -> some View {
+        ZStack {
+            Color.white
+                .frame(width: size.width * 1.8, height: size.height * 1.8)
+                .shadow(radius: 8)
+            if let facadeImage {
+                Image(uiImage: facadeImage).resizable().scaledToFit()
+                    .frame(width: size.width * 1.6, height: size.height * 1.6)
+                    .opacity(document.facadeOpacity)
             }
-            .simultaneously(with:
-                MagnificationGesture()
-                    .onChanged { value in
-                        if mode == .threeD || threeDTool == .sign {
-                            guard let id = selectedID, let i = index(id), !document.layers[i].isLocked else { return }
-                            if activeScaleID != id {
-                                activeScaleID = id
-                                scaleOrigin = document.layers[i].scale
-                            }
-                            document.layers[i].scale = min(max(scaleOrigin * value, 0.15), 6.0)
-                        } else if threeDTool == .facade {
-                            if !facadeScaling {
-                                facadeScaling = true
-                                facadeScaleOrigin = facadeScale
-                            }
-                            facadeScale = min(max(facadeScaleOrigin * value, 0.2), 5.0)
-                        }
-                    }
-                    .onEnded { _ in
-                        activeScaleID = nil
-                        facadeScaling = false
-                    }
-            )
+            ForEach(document.layers) { item in
+                if !item.isHidden {
+                    Text(item.text)
+                        .font(.custom(item.fontName, size: CGFloat(item.fontSize)))
+                        .tracking(CGFloat(item.tracking))
+                        .foregroundStyle(Color(hex: item.fillHex))
+                        .scaleEffect(x: item.scale * item.widthScale, y: item.scale)
+                        .rotationEffect(.degrees(item.rotation))
+                        .offset(x: item.x, y: item.y)
+                        .opacity(item.opacity)
+                        .overlay { if selectedID == item.id { Rectangle().stroke(.blue, style: StrokeStyle(lineWidth: 1, dash: [5,3])).padding(-8) } }
+                        .contentShape(Rectangle()).onTapGesture { selectedID = item.id }
+                        .gesture(item.isLocked ? nil : layerDrag(item.id))
+                }
+            }
+        }
+        .scaleEffect(canvasZoom)
+        .offset(canvasPan)
+        .contentShape(Rectangle())
+        .gesture(canvasGesture)
+    }
+
+    private var canvasGesture: some Gesture {
+        MagnificationGesture().onChanged { value in canvasZoom = min(max(value, 0.25), 5) }
+            .simultaneously(with: DragGesture(minimumDistance: 15).onChanged { value in
+                if selectedID == nil { canvasPan = value.translation }
+            })
+    }
+
+    private func layerDrag(_ id: UUID) -> some Gesture {
+        DragGesture().onChanged { value in
+            guard let i = index(id) else { return }
+            if activeDragID != id { activeDragID = id; dragOrigin = CGPoint(x: document.layers[i].x, y: document.layers[i].y) }
+            selectedID = id
+            document.layers[i].x = dragOrigin.x + value.translation.width / canvasZoom
+            document.layers[i].y = dragOrigin.y + value.translation.height / canvasZoom
+        }.onEnded { _ in activeDragID = nil }
     }
 
     private var inspector: some View {
         VStack(spacing: 0) {
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 5) {
-                    ForEach(InspectorSection.allCases) { tab in
-                        Button {
-                            section = tab
-                        } label: {
-                            VStack(spacing: 3) {
-                                Image(systemName: tab.symbol)
-                                Text(tab.rawValue).font(.caption2)
-                            }
-                            .frame(width: 68, height: 48)
-                            .foregroundStyle(section == tab ? .white : .secondary)
+                HStack(spacing: 5) { ForEach(InspectorSection.allCases) { tab in
+                    Button { section = tab } label: {
+                        VStack(spacing: 3) { Image(systemName: tab.symbol); Text(tab.rawValue).font(.caption2) }
+                            .frame(width: 68, height: 48).foregroundStyle(section == tab ? .white : .secondary)
                             .background(section == tab ? .blue : .clear, in: RoundedRectangle(cornerRadius: 10))
-                        }
                     }
-                }
-                .padding(8)
+                }}.padding(8)
             }
             Divider()
-            ScrollView {
-                controls.padding(14)
-            }
-            .frame(maxHeight: 245)
-        }
-        .background(.ultraThinMaterial)
+            ScrollView { controls.padding(14) }.frame(maxHeight: 245)
+        }.background(.ultraThinMaterial)
     }
 
     @ViewBuilder private var controls: some View {
-        if selectedLayer == nil && section != .layers && section != .facade && section != .lighting {
-            Text("Выберите надпись на холсте")
-                .foregroundStyle(.secondary)
-                .padding(24)
-        } else {
-            switch section {
-            case .text: textControls
-            case .font: fontControls
-            case .curves: curvesControls
-            case .style: styleControls
-            case .transform: transformControls
-            case .geometry: geometryControls
-            case .material: materialControls
-            case .lighting: lightingControls
-            case .facade: facadeControls
-            case .layers: layersControls
-            }
-        }
-    }
-
-    private var textControls: some View {
-        VStack(spacing: 12) {
-            TextField("Текст вывески", text: layerBinding(\.text))
-                .textFieldStyle(.roundedBorder)
-            HStack {
-                Button("ВЕРХНИЙ") { setText { $0.uppercased() } }
-                Button("нижний") { setText { $0.lowercased() } }
-                Button("Каждое Слово") { setText { $0.capitalized } }
-            }
-            .buttonStyle(.bordered)
-        }
-    }
-
-    private var fontControls: some View {
-        VStack(spacing: 12) {
-            TextField("Название шрифта", text: layerBinding(\.fontName))
-                .textFieldStyle(.roundedBorder)
-            valueSlider("Размер", value: layerBinding(\.fontSize), range: 16...220, suffix: " pt")
-            valueSlider("Ширина", value: layerBinding(\.widthScale), range: 0.45...2.0, suffix: "%", multiplier: 100)
-            valueSlider("Межбуквенный", value: layerBinding(\.tracking), range: -8...36, suffix: "")
-        }
-    }
-
-    private var curvesControls: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Label("Кривые", systemImage: "point.topleft.down.to.point.bottomright.curvepath")
-                .font(.headline)
-            Text("В первой сборке 2D-геометрия текста остаётся редактируемым текстом. Преобразование в узлы будет следующим модулем, чтобы не подменять настоящие кривые имитацией.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var styleControls: some View {
-        VStack(spacing: 12) {
-            colorField("Заливка", value: layerBinding(\.fillHex))
-            colorField("Тень", value: layerBinding(\.shadowHex))
-            valueSlider("Прозрачность тени", value: layerBinding(\.shadowOpacity), range: 0...1, suffix: "%", multiplier: 100)
-            valueSlider("Размытие", value: layerBinding(\.shadowBlur), range: 0...40, suffix: "")
-        }
-    }
-
-    private var transformControls: some View {
-        VStack(spacing: 12) {
-            HStack {
-                Button("По центру") {
-                    set(\.x, 0)
-                    set(\.y, 0)
-                }
-                Button("Копия", action: duplicate)
-                Button("Удалить", role: .destructive, action: remove)
-            }
-            .buttonStyle(.bordered)
-            valueSlider("X", value: layerBinding(\.x), range: -600...600, suffix: " pt")
-            valueSlider("Y", value: layerBinding(\.y), range: -600...600, suffix: " pt")
-            valueSlider("Масштаб", value: layerBinding(\.scale), range: 0.2...4, suffix: "%", multiplier: 100)
-            valueSlider("Поворот", value: layerBinding(\.rotation), range: -180...180, suffix: "°")
-        }
-    }
-
-    private var geometryControls: some View {
-        VStack(spacing: 12) {
+        switch section {
+        case .text:
+            TextField("Текст вывески", text: layerBinding(\.text)).textFieldStyle(.roundedBorder)
+        case .font:
+            VStack { TextField("Шрифт (системный / TTF / OTF)", text: layerBinding(\.fontName)).textFieldStyle(.roundedBorder); valueSlider("Размер", value: layerBinding(\.fontSize), range: 16...300, suffix: " pt") }
+        case .curves:
+            VStack(alignment: .leading) { Label("Преобразовать в кривые", systemImage: "point.topleft.down.to.point.bottomright.curvepath").font(.headline); Text("3D работает и с редактируемым текстом. В кривые переводить нужно только для ручного редактирования узлов.").font(.caption).foregroundStyle(.secondary) }
+        case .style:
+            VStack { colorField("Цвет", value: layerBinding(\.fillHex)); colorField("Тень", value: layerBinding(\.shadowHex)); valueSlider("Тень", value: layerBinding(\.shadowOpacity), range: 0...1, suffix: "%", multiplier: 100) }
+        case .transform:
+            VStack { valueSlider("Масштаб", value: layerBinding(\.scale), range: 0.2...4, suffix: "%", multiplier: 100); valueSlider("Поворот", value: layerBinding(\.rotation), range: -180...180, suffix: "°") }
+        case .geometry:
             valueSlider("Глубина буквы", value: layerBinding(\.depthMM), range: 10...200, suffix: " мм")
-            Text("3D сохраняет размер и положение 2D-лицевой части. Глубина добавляется назад от неё.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+        case .material:
+            VStack { Picker("Материал", selection: layerBinding(\.material)) { ForEach(SignMaterialPreset.allCases) { Text($0.rawValue).tag($0) } }.pickerStyle(.menu); colorField("Лицевая часть", value: layerBinding(\.faceHex)); colorField("Боковина", value: layerBinding(\.sideHex)) }
+        case .lighting:
+            VStack { Toggle("Подсветка буквы", isOn: layerBinding(\.signLightEnabled)); valueSlider("Яркость", value: layerBinding(\.signLightIntensity), range: 0...1, suffix: "%", multiplier: 100); valueSlider("Освещение сцены", value: $document.sceneLightIntensity, range: 0.15...2, suffix: "%", multiplier: 100); valueSlider("Направление", value: $document.sceneLightAzimuth, range: -180...180, suffix: "°"); Toggle("Тень", isOn: $document.shadowEnabled) }
+        case .facade:
+            VStack { PhotosPicker(selection: $photoItem, matching: .images) { Label("Импортировать фасад", systemImage: "photo") }.buttonStyle(.borderedProminent); valueSlider("Прозрачность", value: $document.facadeOpacity, range: 0.2...1, suffix: "%", multiplier: 100) }
+        case .layers:
+            VStack { Button { addText() } label: { Label("Добавить текст", systemImage: "plus") }.buttonStyle(.borderedProminent); ForEach(document.layers.reversed()) { item in HStack { Button { selectedID = item.id } label: { Text(item.name).bold() }; Spacer(); Button { toggle(item.id, \.isHidden) } label: { Image(systemName: item.isHidden ? "eye.slash" : "eye") }; Button { toggle(item.id, \.isLocked) } label: { Image(systemName: item.isLocked ? "lock.fill" : "lock.open") } }.padding(8).background(selectedID == item.id ? .blue.opacity(0.2) : .white.opacity(0.05), in: RoundedRectangle(cornerRadius: 8)) } }
         }
     }
 
-    private var materialControls: some View {
-        VStack(spacing: 12) {
-            Picker("Материал", selection: layerBinding(\.material)) {
-                ForEach(SignMaterialPreset.allCases) { item in
-                    Text(item.rawValue).tag(item)
-                }
-            }
-            .pickerStyle(.menu)
-            colorField("Лицевая часть", value: layerBinding(\.faceHex))
-            colorField("Боковина", value: layerBinding(\.sideHex))
-            colorField("Задняя часть", value: layerBinding(\.backHex))
-            Text("Материалы отображаются только после нажатия Render.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    private var lightingControls: some View {
-        VStack(spacing: 12) {
-            if selectedLayer != nil {
-                Toggle("Подсветка буквы", isOn: layerBinding(\.signLightEnabled))
-                Picker("Тип подсветки", selection: layerBinding(\.signLightMode)) {
-                    ForEach(SignLightMode.allCases) { item in
-                        Text(item.rawValue).tag(item)
-                    }
-                }
-                .pickerStyle(.segmented)
-                valueSlider("Яркость вывески", value: layerBinding(\.signLightIntensity), range: 0...1, suffix: "%", multiplier: 100)
-                valueSlider("Температура", value: layerBinding(\.signLightKelvin), range: 2500...8000, suffix: " K")
-            }
-            Divider()
-            valueSlider("Освещение сцены", value: $document.sceneLightIntensity, range: 0.15...2.0, suffix: "%", multiplier: 100)
-            valueSlider("Направление", value: $document.sceneLightAzimuth, range: -180...180, suffix: "°")
-            valueSlider("Высота света", value: $document.sceneLightElevation, range: 5...85, suffix: "°")
-            Toggle("Тень", isOn: $document.shadowEnabled)
-        }
-    }
-
-    private var facadeControls: some View {
-        VStack(spacing: 12) {
-            PhotosPicker(selection: $photoItem, matching: .images) {
-                Label(facadeImage == nil ? "Импортировать фасад" : "Заменить фасад", systemImage: "photo")
-            }
-            .buttonStyle(.borderedProminent)
-            valueSlider("Прозрачность фасада", value: $document.facadeOpacity, range: 0.2...1, suffix: "%", multiplier: 100)
-
-            HStack {
-                Text("X")
-                Spacer()
-                Text("\(Int(facadeOffset.width)) pt").monospacedDigit().foregroundStyle(.secondary)
-            }
-            Slider(
-                value: Binding(
-                    get: { Double(facadeOffset.width) },
-                    set: { facadeOffset.width = CGFloat($0) }
-                ),
-                in: -600...600
-            )
-
-            HStack {
-                Text("Y")
-                Spacer()
-                Text("\(Int(facadeOffset.height)) pt").monospacedDigit().foregroundStyle(.secondary)
-            }
-            Slider(
-                value: Binding(
-                    get: { Double(facadeOffset.height) },
-                    set: { facadeOffset.height = CGFloat($0) }
-                ),
-                in: -600...600
-            )
-
-            HStack {
-                Text("Масштаб фасада")
-                Spacer()
-                Text("\(Int(facadeScale * 100))%").monospacedDigit().foregroundStyle(.secondary)
-            }
-            Slider(value: $facadeScale, in: 0.2...5.0)
-
-            Button("Сбросить положение фасада") {
-                facadeOffset = .zero
-                facadeScale = 1.0
-            }
-            .buttonStyle(.bordered)
-
-            if facadeImage != nil {
-                Button("Убрать фасад", role: .destructive) {
-                    facadeImage = nil
-                    photoItem = nil
-                    facadeOffset = .zero
-                    facadeScale = 1.0
-                }
-            }
-            Text("Фото фасада остаётся исходной текстурой. Render влияет только на вывеску, её тень и подсветку.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    private var layersControls: some View {
-        VStack(spacing: 8) {
-            HStack {
-                Button {
-                    addText()
-                } label: {
-                    Label("Добавить текст", systemImage: "plus")
-                }
-                .buttonStyle(.borderedProminent)
-                Spacer()
-            }
-            ForEach(document.layers.reversed()) { item in
-                HStack {
-                    Button {
-                        selectedID = item.id
-                    } label: {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(item.name).bold()
-                            Text(item.text).font(.caption).lineLimit(1).foregroundStyle(.secondary)
-                        }
-                    }
-                    Spacer()
-                    Button { toggle(item.id, \.isHidden) } label: {
-                        Image(systemName: item.isHidden ? "eye.slash" : "eye")
-                    }
-                    Button { toggle(item.id, \.isLocked) } label: {
-                        Image(systemName: item.isLocked ? "lock.fill" : "lock.open")
-                    }
-                }
-                .padding(10)
-                .background(selectedID == item.id ? .blue.opacity(0.2) : .white.opacity(0.05), in: RoundedRectangle(cornerRadius: 10))
-            }
-        }
-    }
-
-    private func valueSlider(_ title: String, value: Binding<Double>, range: ClosedRange<Double>, suffix: String, multiplier: Double = 1) -> some View {
-        VStack(spacing: 5) {
-            HStack {
-                Text(title)
-                Spacer()
-                Text("\(Int(value.wrappedValue * multiplier))\(suffix)")
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
-            }
-            Slider(value: value, in: range)
-        }
-    }
-
-    private func colorField(_ title: String, value: Binding<String>) -> some View {
-        HStack {
-            Text(title)
-            Spacer()
-            Circle()
-                .fill(Color(hex: value.wrappedValue))
-                .frame(width: 26, height: 26)
-                .overlay(Circle().stroke(.white.opacity(0.25)))
-            TextField("#FFFFFF", text: value)
-                .frame(width: 96)
-                .textFieldStyle(.roundedBorder)
-                .textInputAutocapitalization(.characters)
-        }
-    }
-
-    private var selectedLayer: LetteringLayer? {
-        guard let i = index(selectedID) else { return nil }
-        return document.layers[i]
-    }
-
-    private func index(_ id: UUID?) -> Int? {
-        guard let id else { return nil }
-        return document.layers.firstIndex { $0.id == id }
-    }
-
-    private func layerBinding<T>(_ keyPath: WritableKeyPath<LetteringLayer, T>) -> Binding<T> {
-        Binding(
-            get: {
-                guard let i = index(selectedID) else { return LetteringLayer()[keyPath: keyPath] }
-                return document.layers[i][keyPath: keyPath]
-            },
-            set: { newValue in
-                guard let i = index(selectedID) else { return }
-                document.layers[i][keyPath: keyPath] = newValue
-            }
-        )
-    }
-
-    private func set<T>(_ keyPath: WritableKeyPath<LetteringLayer, T>, _ value: T) {
-        guard let i = index(selectedID) else { return }
-        document.layers[i][keyPath: keyPath] = value
-    }
-
-    private func setText(_ transform: (String) -> String) {
-        guard let i = index(selectedID) else { return }
-        document.layers[i].text = transform(document.layers[i].text)
-    }
-
-    private func addText() {
-        var layer = LetteringLayer()
-        layer.id = UUID()
-        layer.name = "Надпись \(document.layers.count + 1)"
-        layer.text = "НОВАЯ НАДПИСЬ"
-        layer.y = Double(document.layers.count * 28)
-        document.layers.append(layer)
-        selectedID = layer.id
-        section = .text
-    }
-
-    private func duplicate() {
-        guard var layer = selectedLayer else { return }
-        layer.id = UUID()
-        layer.name += " копия"
-        layer.x += 28
-        layer.y += 28
-        document.layers.append(layer)
-        selectedID = layer.id
-    }
-
-    private func remove() {
-        guard let i = index(selectedID) else { return }
-        document.layers.remove(at: i)
-        selectedID = document.layers.last?.id
-    }
-
-    private func toggle(_ id: UUID, _ keyPath: WritableKeyPath<LetteringLayer, Bool>) {
-        guard let i = index(id) else { return }
-        document.layers[i][keyPath: keyPath].toggle()
-    }
-
-    private func save() {
-        if let data = try? JSONEncoder().encode(document) {
-            UserDefaults.standard.set(data, forKey: "ColorizeDesignV1")
-        }
-    }
-
-    private func restore() {
-        if let data = UserDefaults.standard.data(forKey: "ColorizeDesignV1"),
-           let saved = try? JSONDecoder().decode(LetteringDocument.self, from: data) {
-            document = saved
-        }
-        if document.layers.isEmpty { document.layers = [LetteringLayer()] }
-    }
-
-    private func loadFacade() async {
-        guard let data = try? await photoItem?.loadTransferable(type: Data.self),
-              let image = UIImage(data: data) else { return }
-        facadeImage = image
-    }
+    private func valueSlider(_ title: String, value: Binding<Double>, range: ClosedRange<Double>, suffix: String, multiplier: Double = 1) -> some View { VStack { HStack { Text(title); Spacer(); Text("\(Int(value.wrappedValue * multiplier))\(suffix)").monospacedDigit().foregroundStyle(.secondary) }; Slider(value: value, in: range) } }
+    private func colorField(_ title: String, value: Binding<String>) -> some View { HStack { Text(title); Spacer(); Circle().fill(Color(hex: value.wrappedValue)).frame(width: 26,height:26); TextField("#FFFFFF", text:value).frame(width:96).textFieldStyle(.roundedBorder) } }
+    private func index(_ id: UUID?) -> Int? { guard let id else { return nil }; return document.layers.firstIndex { $0.id == id } }
+    private func layerBinding<T>(_ kp: WritableKeyPath<LetteringLayer,T>) -> Binding<T> { Binding(get: { guard let i=index(selectedID) else { return LetteringLayer()[keyPath:kp] }; return document.layers[i][keyPath:kp] }, set: { guard let i=index(selectedID) else{return}; document.layers[i][keyPath:kp]=$0 }) }
+    private func toggle(_ id: UUID,_ kp: WritableKeyPath<LetteringLayer,Bool>) { guard let i=index(id) else{return}; document.layers[i][keyPath:kp].toggle() }
+    private func addText() { var l=LetteringLayer(); l.id=UUID(); l.name="Надпись \(document.layers.count+1)"; l.text="НОВАЯ НАДПИСЬ"; document.layers.append(l); selectedID=l.id; section = .text }
+    private func save() { if let d=try? JSONEncoder().encode(document) { UserDefaults.standard.set(d,forKey:"ColorizeDesignV1") } }
+    private func restore() { if let d=UserDefaults.standard.data(forKey:"ColorizeDesignV1"), let s=try? JSONDecoder().decode(LetteringDocument.self,from:d){document=s}; if document.layers.isEmpty{document.layers=[LetteringLayer()]} }
+    private func loadFacade() async { guard let data=try? await photoItem?.loadTransferable(type:Data.self), let image=UIImage(data:data) else{return}; facadeImage=image }
 }
