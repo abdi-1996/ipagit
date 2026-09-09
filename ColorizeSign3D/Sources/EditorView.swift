@@ -15,6 +15,7 @@ struct EditorView: View {
     @State private var isNight = false
     @State private var showInspector = true
     @State private var show3D = false
+    @State private var didRestore = false
 
     var body: some View {
         NavigationStack {
@@ -48,6 +49,9 @@ struct EditorView: View {
                 }
             }
             .task(id: photoItem) { await loadPhoto() }
+            .onAppear { restoreProject() }
+            .onChange(of: project.text) { _, _ in saveProject() }
+            .onChange(of: project) { _, _ in saveProject() }
             .sheet(isPresented: $show3D) {
                 NavigationStack {
                     Sign3DView(project: project, isNight: isNight)
@@ -116,20 +120,30 @@ struct EditorView: View {
     private var signOverlay: some View {
         let glow = project.lighting != .none && isNight
         return ZStack {
+            if project.hasPanel {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(hex: project.panelHex))
+                    .shadow(color: .black.opacity(0.5), radius: 5, y: 4)
+                    .padding(3)
+            }
             if project.depthCM > 0 {
                 Text(project.text)
-                    .font(.system(size: 42, weight: .black, design: .rounded))
+                    .font(.system(size: 42, weight: .black, design: project.font.design).width(project.font.width))
+                    .tracking(project.letterSpacing)
                     .foregroundStyle(.black.opacity(0.85))
                     .offset(x: CGFloat(project.depthCM / 2.5), y: CGFloat(project.depthCM / 2.5))
             }
             Text(project.text)
-                .font(.system(size: 42, weight: .black, design: .rounded))
-                .foregroundStyle(project.material.color)
-                .shadow(color: glow ? Color(hex: project.lightHex).opacity(project.brightness) : .black.opacity(0.45), radius: glow ? 18 : 3)
-                .shadow(color: glow ? Color(hex: project.lightHex).opacity(project.brightness * 0.7) : .clear, radius: 35)
+                .font(.system(size: 42, weight: .black, design: project.font.design).width(project.font.width))
+                .tracking(project.letterSpacing)
+                .foregroundStyle(Color(hex: project.faceHex))
+                .shadow(color: glow ? Color(hex: project.lightHex).opacity(project.brightness) : .black.opacity(0.45), radius: glow ? project.haloRadius : 3)
+                .shadow(color: glow ? Color(hex: project.lightHex).opacity(project.brightness * 0.7) : .clear, radius: project.haloRadius * 1.7)
         }
         .padding(16)
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(.cyan.opacity(0.8), style: StrokeStyle(lineWidth: 1, dash: [5])))
+        .rotation3DEffect(.degrees(project.tiltX), axis: (x: 1, y: 0, z: 0), perspective: 0.45)
+        .rotation3DEffect(.degrees(project.tiltY), axis: (x: 0, y: 1, z: 0), perspective: 0.45)
     }
 
     private var bottomBar: some View {
@@ -142,6 +156,12 @@ struct EditorView: View {
                         Picker("Материал", selection: $project.material) {
                             ForEach(SignMaterial.allCases) { Text($0.rawValue).tag($0) }
                         }.pickerStyle(.segmented)
+                        Picker("Шрифт", selection: $project.font) {
+                            ForEach(SignFont.allCases) { Text($0.rawValue).tag($0) }
+                        }.pickerStyle(.menu)
+                        Toggle("Подложка под вывеску", isOn: $project.hasPanel)
+                        colorRow("Цвет лицевой части", hex: $project.faceHex)
+                        colorRow("Цвет подсветки", hex: $project.lightHex)
                         Picker("Подсветка", selection: $project.lighting) {
                             ForEach(LightingMode.allCases) { Text($0.rawValue).tag($0) }
                         }
@@ -150,6 +170,10 @@ struct EditorView: View {
                         dimension("Высота", value: $project.heightCM, range: 10...300, suffix: "см")
                         dimension("Глубина", value: $project.depthCM, range: 0...30, suffix: "см")
                         dimension("Яркость", value: $project.brightness, range: 0...1, suffix: "%", multiplier: 100)
+                        dimension("Ореол", value: $project.haloRadius, range: 2...60, suffix: "")
+                        dimension("Интервал букв", value: $project.letterSpacing, range: -2...12, suffix: "")
+                        dimension("Наклон X", value: $project.tiltX, range: -45...45, suffix: "°")
+                        dimension("Наклон Y", value: $project.tiltY, range: -45...45, suffix: "°")
                     }
                     .padding(14)
                 }
@@ -175,6 +199,19 @@ struct EditorView: View {
         }
     }
 
+    private func colorRow(_ title: String, hex: Binding<String>) -> some View {
+        HStack {
+            Text(title)
+            Spacer()
+            Circle().fill(Color(hex: hex.wrappedValue)).frame(width: 24, height: 24)
+            TextField("#FFFFFF", text: hex)
+                .textInputAutocapitalization(.characters)
+                .multilineTextAlignment(.trailing)
+                .frame(width: 90)
+                .textFieldStyle(.roundedBorder)
+        }
+    }
+
     private var moveGesture: some Gesture {
         DragGesture().onChanged { signOffset = CGSize(width: lastOffset.width + $0.translation.width, height: lastOffset.height + $0.translation.height) }
             .onEnded { _ in lastOffset = signOffset }
@@ -191,6 +228,22 @@ struct EditorView: View {
     private func loadPhoto() async {
         guard let data = try? await photoItem?.loadTransferable(type: Data.self), let image = UIImage(data: data) else { return }
         facadeImage = image
+        if let jpeg = image.jpegData(compressionQuality: 0.72) {
+            UserDefaults.standard.set(jpeg, forKey: "facadeImage")
+        }
+    }
+
+    private func saveProject() {
+        guard didRestore, let data = try? JSONEncoder().encode(project) else { return }
+        UserDefaults.standard.set(data, forKey: "signProjectV11")
+    }
+
+    private func restoreProject() {
+        guard !didRestore else { return }
+        if let data = UserDefaults.standard.data(forKey: "signProjectV11"),
+           let saved = try? JSONDecoder().decode(SignProject.self, from: data) { project = saved }
+        if let data = UserDefaults.standard.data(forKey: "facadeImage") { facadeImage = UIImage(data: data) }
+        didRestore = true
     }
 }
 
