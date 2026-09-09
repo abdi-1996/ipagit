@@ -2,6 +2,22 @@ import SwiftUI
 import PhotosUI
 import UIKit
 
+private enum ThreeDTool: String, CaseIterable, Identifiable {
+    case camera = "Камера"
+    case sign = "Буквы"
+    case facade = "Фасад"
+
+    var id: String { rawValue }
+
+    var symbol: String {
+        switch self {
+        case .camera: return "camera.viewfinder"
+        case .sign: return "textformat"
+        case .facade: return "building.2"
+        }
+    }
+}
+
 struct EditorView: View {
     @State private var document = LetteringDocument()
     @State private var selectedID: UUID?
@@ -11,7 +27,19 @@ struct EditorView: View {
     @State private var photoItem: PhotosPickerItem?
     @State private var facadeImage: UIImage?
     @State private var showInspector = true
+    @State private var threeDTool: ThreeDTool = .camera
+
+    @State private var activeDragID: UUID?
     @State private var dragOrigin = CGPoint.zero
+    @State private var activeScaleID: UUID?
+    @State private var scaleOrigin = 1.0
+
+    @State private var facadeOffset: CGSize = .zero
+    @State private var facadeDragOrigin: CGSize = .zero
+    @State private var facadeDragging = false
+    @State private var facadeScale = 1.0
+    @State private var facadeScaleOrigin = 1.0
+    @State private var facadeScaling = false
 
     var body: some View {
         NavigationStack {
@@ -74,7 +102,21 @@ struct EditorView: View {
             }
             .pickerStyle(.segmented)
             .onChange(of: mode) { _, newMode in
-                if newMode == .twoD { rendered = false }
+                rendered = false
+                activeDragID = nil
+                activeScaleID = nil
+                if newMode == .threeDView {
+                    threeDTool = .camera
+                }
+            }
+
+            if mode == .threeDView {
+                Picker("Инструмент 3D View", selection: $threeDTool) {
+                    ForEach(ThreeDTool.allCases) { tool in
+                        Label(tool.rawValue, systemImage: tool.symbol).tag(tool)
+                    }
+                }
+                .pickerStyle(.segmented)
             }
         }
         .padding(.horizontal, 12)
@@ -87,26 +129,47 @@ struct EditorView: View {
         GeometryReader { proxy in
             ZStack {
                 Color.black.opacity(0.18)
+
                 if mode == .twoD {
                     twoDCanvas
                         .padding(12)
                 } else {
-                    Sign3DView(
-                        document: document,
-                        selectedID: selectedID,
-                        orbitEnabled: mode == .threeDView,
-                        rendered: rendered,
-                        facadeImage: facadeImage
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    ZStack {
+                        Sign3DView(
+                            document: document,
+                            selectedID: selectedID,
+                            orbitContext: mode == .threeDView,
+                            cameraControlEnabled: mode == .threeDView && threeDTool == .camera,
+                            rendered: rendered,
+                            facadeImage: facadeImage,
+                            facadeOffset: facadeOffset,
+                            facadeScale: facadeScale
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+
+                        if mode == .threeD || (mode == .threeDView && threeDTool != .camera) {
+                            Color.clear
+                                .contentShape(Rectangle())
+                                .gesture(threeDEditGesture)
+                        }
+                    }
                     .padding(12)
                     .overlay(alignment: .topLeading) {
                         VStack(alignment: .leading, spacing: 5) {
-                            Text(mode == .threeD ? "3D · фиксированная камера" : "3D View · свободная камера")
+                            Text(mode == .threeD ? "3D · фиксированная камера" : "3D View · \(threeDTool.rawValue)")
                                 .font(.caption.bold())
-                            Text(rendered ? "PBR материалы · тени · подсветка" : "Быстрый Solid без финального рендера")
+                            Text(rendered ? "Render: материалы · тени · подсветка" : "Solid: объём + тень, без материалов")
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
+                            if mode == .threeD {
+                                Text("Потяните буквы для перемещения · щипок меняет размер")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            } else if threeDTool != .camera {
+                                Text("Потяните объект · щипок меняет его размер")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                         .padding(10)
                         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
@@ -128,6 +191,8 @@ struct EditorView: View {
                     Image(uiImage: facadeImage)
                         .resizable()
                         .scaledToFit()
+                        .scaleEffect(facadeScale)
+                        .offset(facadeOffset)
                         .opacity(document.facadeOpacity)
                         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                 }
@@ -136,7 +201,6 @@ struct EditorView: View {
                     if !item.isHidden {
                         Text(item.text)
                             .font(.custom(item.fontName, size: CGFloat(item.fontSize)))
-                            .fontWeight(.bold)
                             .tracking(CGFloat(item.tracking))
                             .foregroundStyle(Color(hex: item.fillHex))
                             .shadow(
@@ -158,7 +222,7 @@ struct EditorView: View {
                             }
                             .contentShape(Rectangle())
                             .onTapGesture { selectedID = item.id }
-                            .gesture(item.isLocked ? nil : dragGesture(item.id))
+                            .gesture(item.isLocked ? nil : layerGesture(item.id))
                     }
                 }
 
@@ -187,17 +251,87 @@ struct EditorView: View {
         }
     }
 
-    private func dragGesture(_ id: UUID) -> some Gesture {
+    private func layerGesture(_ id: UUID) -> some Gesture {
         DragGesture()
             .onChanged { value in
                 guard let i = index(id) else { return }
-                if value.translation == .zero {
+                if activeDragID != id {
+                    activeDragID = id
                     dragOrigin = CGPoint(x: document.layers[i].x, y: document.layers[i].y)
                 }
                 selectedID = id
                 document.layers[i].x = dragOrigin.x + value.translation.width
                 document.layers[i].y = dragOrigin.y + value.translation.height
             }
+            .onEnded { _ in
+                activeDragID = nil
+            }
+            .simultaneously(with:
+                MagnificationGesture()
+                    .onChanged { value in
+                        guard let i = index(id) else { return }
+                        if activeScaleID != id {
+                            activeScaleID = id
+                            scaleOrigin = document.layers[i].scale
+                        }
+                        selectedID = id
+                        document.layers[i].scale = min(max(scaleOrigin * value, 0.15), 6.0)
+                    }
+                    .onEnded { _ in
+                        activeScaleID = nil
+                    }
+            )
+    }
+
+    private var threeDEditGesture: some Gesture {
+        DragGesture()
+            .onChanged { value in
+                if mode == .threeD || threeDTool == .sign {
+                    guard let id = selectedID, let i = index(id), !document.layers[i].isLocked else { return }
+                    if activeDragID != id {
+                        activeDragID = id
+                        dragOrigin = CGPoint(x: document.layers[i].x, y: document.layers[i].y)
+                    }
+                    document.layers[i].x = dragOrigin.x + value.translation.width
+                    document.layers[i].y = dragOrigin.y + value.translation.height
+                } else if threeDTool == .facade {
+                    if !facadeDragging {
+                        facadeDragging = true
+                        facadeDragOrigin = facadeOffset
+                    }
+                    facadeOffset = CGSize(
+                        width: facadeDragOrigin.width + value.translation.width,
+                        height: facadeDragOrigin.height + value.translation.height
+                    )
+                }
+            }
+            .onEnded { _ in
+                activeDragID = nil
+                facadeDragging = false
+            }
+            .simultaneously(with:
+                MagnificationGesture()
+                    .onChanged { value in
+                        if mode == .threeD || threeDTool == .sign {
+                            guard let id = selectedID, let i = index(id), !document.layers[i].isLocked else { return }
+                            if activeScaleID != id {
+                                activeScaleID = id
+                                scaleOrigin = document.layers[i].scale
+                            }
+                            document.layers[i].scale = min(max(scaleOrigin * value, 0.15), 6.0)
+                        } else if threeDTool == .facade {
+                            if !facadeScaling {
+                                facadeScaling = true
+                                facadeScaleOrigin = facadeScale
+                            }
+                            facadeScale = min(max(facadeScaleOrigin * value, 0.2), 5.0)
+                        }
+                    }
+                    .onEnded { _ in
+                        activeScaleID = nil
+                        facadeScaling = false
+                    }
+            )
     }
 
     private var inspector: some View {
@@ -304,6 +438,8 @@ struct EditorView: View {
                 Button("Удалить", role: .destructive, action: remove)
             }
             .buttonStyle(.bordered)
+            valueSlider("X", value: layerBinding(\.x), range: -600...600, suffix: " pt")
+            valueSlider("Y", value: layerBinding(\.y), range: -600...600, suffix: " pt")
             valueSlider("Масштаб", value: layerBinding(\.scale), range: 0.2...4, suffix: "%", multiplier: 100)
             valueSlider("Поворот", value: layerBinding(\.rotation), range: -180...180, suffix: "°")
         }
@@ -312,7 +448,7 @@ struct EditorView: View {
     private var geometryControls: some View {
         VStack(spacing: 12) {
             valueSlider("Глубина буквы", value: layerBinding(\.depthMM), range: 10...200, suffix: " мм")
-            Text("В 3D глубина строится физической экструзией геометрии, а не плоской тенью.")
+            Text("3D сохраняет размер и положение 2D-лицевой части. Глубина добавляется назад от неё.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -329,6 +465,9 @@ struct EditorView: View {
             colorField("Лицевая часть", value: layerBinding(\.faceHex))
             colorField("Боковина", value: layerBinding(\.sideHex))
             colorField("Задняя часть", value: layerBinding(\.backHex))
+            Text("Материалы отображаются только после нажатия Render.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -360,13 +499,55 @@ struct EditorView: View {
             }
             .buttonStyle(.borderedProminent)
             valueSlider("Прозрачность фасада", value: $document.facadeOpacity, range: 0.2...1, suffix: "%", multiplier: 100)
+
+            HStack {
+                Text("X")
+                Spacer()
+                Text("\(Int(facadeOffset.width)) pt").monospacedDigit().foregroundStyle(.secondary)
+            }
+            Slider(
+                value: Binding(
+                    get: { Double(facadeOffset.width) },
+                    set: { facadeOffset.width = CGFloat($0) }
+                ),
+                in: -600...600
+            )
+
+            HStack {
+                Text("Y")
+                Spacer()
+                Text("\(Int(facadeOffset.height)) pt").monospacedDigit().foregroundStyle(.secondary)
+            }
+            Slider(
+                value: Binding(
+                    get: { Double(facadeOffset.height) },
+                    set: { facadeOffset.height = CGFloat($0) }
+                ),
+                in: -600...600
+            )
+
+            HStack {
+                Text("Масштаб фасада")
+                Spacer()
+                Text("\(Int(facadeScale * 100))%").monospacedDigit().foregroundStyle(.secondary)
+            }
+            Slider(value: $facadeScale, in: 0.2...5.0)
+
+            Button("Сбросить положение фасада") {
+                facadeOffset = .zero
+                facadeScale = 1.0
+            }
+            .buttonStyle(.bordered)
+
             if facadeImage != nil {
                 Button("Убрать фасад", role: .destructive) {
                     facadeImage = nil
                     photoItem = nil
+                    facadeOffset = .zero
+                    facadeScale = 1.0
                 }
             }
-            Text("Фото фасада используется как фон. При включении Render его исходная текстура не перерисовывается.")
+            Text("Фото фасада остаётся исходной текстурой. Render влияет только на вывеску, её тень и подсветку.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
