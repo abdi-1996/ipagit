@@ -14,7 +14,8 @@ struct EditorView: View {
     @State private var showExport = false
     @State private var showShare = false
     @State private var shareItems: [Any] = []
-    @State private var zoom = 0.42
+    @State private var zoom = 0.32
+    @State private var didFitCanvas = false
     @State private var dragOrigin = CGPoint.zero
     @State private var scaleOrigin = 1.0
     @State private var rotationOrigin = 0.0
@@ -59,13 +60,17 @@ struct EditorView: View {
                     .shadow(color: .black.opacity(0.55), radius: 30, y: 18)
                 VStack { Spacer(); HStack { Spacer(); HStack(spacing: 6) { Button { zoom = max(0.12, zoom - 0.06) } label: { Image(systemName: "minus") }; Text("\(Int(zoom * 100))%").font(.caption.monospacedDigit()); Button { zoom = min(1.5, zoom + 0.06) } label: { Image(systemName: "plus") } }.padding(8).background(.ultraThinMaterial, in: Capsule()).padding(12) } }
             }.clipped().onTapGesture { selectedID = nil }
-                .onAppear { zoom = min((proxy.size.width - 34) / document.canvasWidth, (proxy.size.height - 28) / document.canvasHeight, 1) }
+                .onChange(of: proxy.size, initial: true) { _, size in
+                    guard size.width > 100, size.height > 100, !didFitCanvas else { return }
+                    zoom = max(0.15, min((size.width - 34) / document.canvasWidth, (size.height - 28) / document.canvasHeight, 1))
+                    didFitCanvas = true
+                }
         }
     }
 
     private func canvas(editable: Bool) -> some View {
         ZStack {
-            if document.transparentBackground { TransparencyGrid() } else { Color(hex: document.backgroundHex) }
+            Color.white
             ForEach(document.layers) { item in
                 if !item.isHidden {
                     OutlinedText(layer: item)
@@ -169,7 +174,18 @@ struct EditorView: View {
     private func setText(_ action: (String) -> String) { guard let text = layer?.text else { return }; checkpoint(); set(\.text, action(text)) }
     private func toggle(_ id: UUID, _ key: WritableKeyPath<LetteringLayer, Bool>) { guard let i = index(id) else { return }; checkpoint(); document.layers[i][keyPath: key].toggle() }
     private func save() { if let data = try? JSONEncoder().encode(document) { UserDefaults.standard.set(data, forKey: "letteringDocumentV1") } }
-    private func restore() { if let data = UserDefaults.standard.data(forKey: "letteringDocumentV1"), let value = try? JSONDecoder().decode(LetteringDocument.self, from: data) { document = value } }
+    private func restore() {
+        if let data = UserDefaults.standard.data(forKey: "letteringDocumentV1"), let value = try? JSONDecoder().decode(LetteringDocument.self, from: data) { document = value }
+        document.transparentBackground = false
+        document.backgroundHex = "#FFFFFF"
+        if document.layers.isEmpty { document.layers = [LetteringLayer()] }
+        for i in document.layers.indices {
+            if abs(document.layers[i].x) > document.canvasWidth / 2 { document.layers[i].x = 0 }
+            if abs(document.layers[i].y) > document.canvasHeight / 2 { document.layers[i].y = 0 }
+            if document.layers[i].fillHex.uppercased() == "#FFFFFF" { document.layers[i].fillHex = "#111827" }
+            document.layers[i].isHidden = false
+        }
+    }
 
     private func importFont(_ result: Result<URL, Error>) {
         guard case .success(let url) = result else { return }; let access = url.startAccessingSecurityScopedResource(); defer { if access { url.stopAccessingSecurityScopedResource() } }; var error: Unmanaged<CFError>?
