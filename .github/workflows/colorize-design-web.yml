@@ -28,24 +28,24 @@ jobs:
           test -s ColorizeDesignWeb/index.html
           test -s ColorizeDesignWeb/styles.css
           test -s ColorizeDesignWeb/app.js
-          test -s ColorizeDesignWeb/boot-v07.js
+          test -s ColorizeDesignWeb/boot-v071.js
           test -s ColorizeDesignWeb/v06-font-sync.js
-          test -s ColorizeDesignWeb/v07-render-engine.js
+          test -s ColorizeDesignWeb/v071-render-engine.js
           test -s ColorizeDesignWeb/v07.css
           node --input-type=module --check < ColorizeDesignWeb/app.js
           node --input-type=module --check < ColorizeDesignWeb/v06-font-sync.js
-          node --input-type=module --check < ColorizeDesignWeb/v07-render-engine.js
+          node --input-type=module --check < ColorizeDesignWeb/v071-render-engine.js
 
       - name: Package browser build
         run: |
           cd ColorizeDesignWeb
-          zip -qr ../ColorizeDesignWeb-v0.7.zip .
+          zip -qr ../ColorizeDesignWeb-v0.7.1.zip .
 
       - name: Upload downloadable build
         uses: actions/upload-artifact@v4
         with:
-          name: ColorizeDesignWeb-v0.7
-          path: ColorizeDesignWeb-v0.7.zip
+          name: ColorizeDesignWeb-v0.7.1
+          path: ColorizeDesignWeb-v0.7.1.zip
           retention-days: 30
 
       - name: Configure Pages
