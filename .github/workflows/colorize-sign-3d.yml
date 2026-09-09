@@ -17,45 +17,30 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-
       - name: Install XcodeGen
         run: brew install xcodegen
-
       - name: Generate project
         working-directory: ColorizeSign3D
         run: xcodegen generate
-
       - name: Build for iPhone
         working-directory: ColorizeSign3D
         run: |
           set -o pipefail
-          xcodebuild \
-            -project ColorizeSign3D.xcodeproj \
-            -scheme ColorizeSign3D \
-            -configuration Release \
-            -sdk iphoneos \
-            -derivedDataPath build \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            build | tee xcodebuild.log
-
+          xcodebuild -project ColorizeSign3D.xcodeproj -scheme ColorizeSign3D -configuration Release -sdk iphoneos -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build | tee xcodebuild.log
       - name: Package unsigned IPA
         working-directory: ColorizeSign3D
         run: |
           mkdir -p Payload
           cp -R build/Build/Products/Release-iphoneos/ColorizeSign3D.app Payload/
-          /usr/bin/zip -qry ColorizeDesign-v2.1.2-unsigned.ipa Payload
-          test -s ColorizeDesign-v2.1.2-unsigned.ipa
-
+          /usr/bin/zip -qry ColorizeDesign-v2.2.0-unsigned.ipa Payload
+          test -s ColorizeDesign-v2.2.0-unsigned.ipa
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
-          name: ColorizeDesign-v2.1.2-IPA
-          path: ColorizeSign3D/ColorizeDesign-v2.1.2-unsigned.ipa
+          name: ColorizeDesign-v2.2.0-IPA
+          path: ColorizeSign3D/ColorizeDesign-v2.2.0-unsigned.ipa
           if-no-files-found: error
           retention-days: 30
-
       - name: Upload build log on failure
         if: failure()
         uses: actions/upload-artifact@v4
