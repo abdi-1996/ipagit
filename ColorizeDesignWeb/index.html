@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
   <meta name="theme-color" content="#17191d" />
   <title>Colorize Design Web</title>
   <link rel="stylesheet" href="./styles.css" />
@@ -12,7 +12,7 @@
     <header class="topbar">
       <div class="brand">
         <strong>COLORIZE<br>DESIGN</strong>
-        <span>Web v0.2</span>
+        <span>Web v0.3</span>
       </div>
       <div class="mode-group" aria-label="Режим отображения">
         <button class="mode active" data-mode="2d">2D</button>
@@ -56,6 +56,7 @@
       </main>
 
       <aside id="rightPanel" class="right-panel">
+        <button class="mobile-sheet-handle" aria-label="Закрыть панель" onclick="document.getElementById('rightPanel').classList.remove('open')"><span></span></button>
         <div class="panel-tabs">
           <button class="panel-tab active" data-panel="layers">Слои</button>
           <button class="panel-tab" data-panel="artboards">Artboards</button>
@@ -90,6 +91,14 @@
         </div>
       </aside>
     </div>
+
+    <nav class="mobile-bottom-dock" aria-label="Инструменты iPhone">
+      <button onclick="document.getElementById('selectTool').click();document.getElementById('rightPanel').classList.remove('open')"><span class="dock-icon">↖</span><span>Выбор</span></button>
+      <button onclick="document.getElementById('addTextBtn').click();document.querySelector('.panel-tab[data-panel=\'properties\']').click();document.getElementById('rightPanel').classList.add('open')"><span class="dock-icon">T</span><span>Текст</span></button>
+      <button onclick="document.getElementById('imageInput').click()"><span class="dock-icon">▧</span><span>Фото</span></button>
+      <button onclick="document.querySelector('.panel-tab[data-panel=\'layers\']').click();document.getElementById('rightPanel').classList.add('open')"><span class="dock-icon">☷</span><span>Слои</span></button>
+      <button onclick="document.querySelector('.panel-tab[data-panel=\'properties\']').click();document.getElementById('rightPanel').classList.add('open')"><span class="dock-icon">◇</span><span>Вывеска</span></button>
+    </nav>
   </div>
 
   <script src="./app.js"></script>
