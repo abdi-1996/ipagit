@@ -1,0 +1,6 @@
+/* v0.5: keep 3D View visually in the same workspace as 2D/3D. */
+.three-host{background:transparent!important}
+.three-host[hidden]{display:none!important}
+@media(max-width:900px){
+  .mode-badge{max-width:calc(100vw - 20px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+}
