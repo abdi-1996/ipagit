@@ -25,7 +25,25 @@ enum LightingMode: String, CaseIterable, Identifiable, Codable {
     var id: String { rawValue }
 }
 
-struct SignProject: Codable {
+enum SignFont: String, CaseIterable, Identifiable, Codable {
+    case rounded = "Скруглённый"
+    case modern = "Современный"
+    case classic = "Классический"
+    case condensed = "Узкий"
+    var id: String { rawValue }
+
+    var design: Font.Design {
+        switch self {
+        case .rounded: return .rounded
+        case .modern, .condensed: return .default
+        case .classic: return .serif
+        }
+    }
+
+    var width: Font.Width { self == .condensed ? .condensed : .standard }
+}
+
+struct SignProject: Codable, Equatable {
     var text = "COLORIZE"
     var widthCM = 300.0
     var heightCM = 55.0
@@ -33,6 +51,13 @@ struct SignProject: Codable {
     var material = SignMaterial.gold
     var lighting = LightingMode.halo
     var lightHex = "#FFD48A"
+    var faceHex = "#F2B335"
     var brightness = 0.8
+    var haloRadius = 24.0
+    var letterSpacing = 0.0
+    var tiltX = 0.0
+    var tiltY = 0.0
+    var font = SignFont.rounded
+    var hasPanel = false
+    var panelHex = "#151A22"
 }
-
