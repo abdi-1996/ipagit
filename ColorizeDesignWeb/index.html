@@ -6,101 +6,95 @@
   <meta name="theme-color" content="#17191d" />
   <title>Colorize Design Web</title>
   <link rel="stylesheet" href="./styles.css" />
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+    }
+  }
+  </script>
 </head>
 <body>
-  <div id="app">
-    <header class="topbar">
-      <div class="brand">
-        <strong>COLORIZE<br>DESIGN</strong>
-        <span>Web v0.3</span>
-      </div>
-      <div class="mode-group" aria-label="Режим отображения">
-        <button class="mode active" data-mode="2d">2D</button>
-        <button class="mode" data-mode="3d">3D</button>
-        <button class="mode" data-mode="render">Render</button>
-        <button class="mode" data-mode="view3d">3D View</button>
-        <button id="view3dRenderBtn" class="view3d-render" hidden>Render OFF</button>
-      </div>
-      <div class="top-actions">
-        <button id="fitBtn" title="Показать Artboard целиком">Вписать</button>
-        <button id="saveBtn">Сохранить</button>
-        <button id="panelToggle" class="mobile-only">Панели</button>
-      </div>
-    </header>
-
-    <div class="main-grid">
-      <aside class="leftbar">
-        <button id="selectTool" class="tool active" title="Выбор">↖</button>
-        <button id="panTool" class="tool" title="Рука / панорама">✋</button>
-        <button id="addArtboardBtn" class="tool" title="Artboard">▣</button>
-        <button id="addTextBtn" class="tool" title="Текст">T</button>
-        <button id="addRectBtn" class="tool" title="Прямоугольник">▭</button>
-        <label class="tool file-tool" title="Импорт изображения">⌁
-          <input id="imageInput" type="file" accept="image/*" hidden />
-        </label>
-        <div class="tool-sep"></div>
-        <button id="zoomOutBtn" class="tool" title="Уменьшить">−</button>
-        <button id="zoomInBtn" class="tool" title="Увеличить">+</button>
-        <button id="centerBtn" class="tool" title="Центрировать рабочую область">◎</button>
-      </aside>
-
-      <main id="viewport" class="viewport" tabindex="0">
-        <div class="viewport-grid"></div>
-        <div id="world" class="world"></div>
-        <div class="mode-badge" id="modeBadge">2D · редактирование</div>
-        <div class="statusbar">
-          <span id="toolStatus">Выбор</span>
-          <span id="zoomStatus">100%</span>
-          <span id="coordStatus">X 0 · Y 0</span>
-        </div>
-      </main>
-
-      <aside id="rightPanel" class="right-panel">
-        <button class="mobile-sheet-handle" aria-label="Закрыть панель" onclick="document.getElementById('rightPanel').classList.remove('open')"><span></span></button>
-        <div class="panel-tabs">
-          <button class="panel-tab active" data-panel="layers">Слои</button>
-          <button class="panel-tab" data-panel="artboards">Artboards</button>
-          <button class="panel-tab" data-panel="properties">Вывеска</button>
-        </div>
-
-        <section id="panel-layers" class="panel-body active">
-          <div class="panel-head">
-            <strong>Слои</strong>
-            <button id="duplicateBtn">Дубль</button>
-          </div>
-          <div id="layersList" class="list"></div>
-        </section>
-
-        <section id="panel-artboards" class="panel-body">
-          <div class="panel-head">
-            <strong>Монтажные области</strong>
-            <button id="panelAddArtboardBtn">+</button>
-          </div>
-          <div id="artboardsList" class="list"></div>
-        </section>
-
-        <section id="panel-properties" class="panel-body">
-          <div class="panel-head"><strong>Свойства вывески</strong></div>
-          <div id="properties" class="properties empty">Выберите текст или Artboard</div>
-        </section>
-
-        <div class="panel-footer">
-          <button id="newProjectBtn">Новый</button>
-          <button id="exportBtn">Экспорт JSON</button>
-          <label class="import-label">Импорт JSON<input id="importInput" type="file" accept="application/json,.json" hidden /></label>
-        </div>
-      </aside>
+<div id="app">
+  <header class="topbar">
+    <div class="brand"><strong>COLORIZE<br>DESIGN</strong><span>Web v0.4</span></div>
+    <div class="mode-group" aria-label="Режим отображения">
+      <button class="mode active" data-mode="2d">2D</button>
+      <button class="mode" data-mode="3d">3D</button>
+      <button class="mode" data-mode="render">Render</button>
+      <button class="mode" data-mode="view3d">3D View</button>
+      <button id="view3dRenderBtn" class="view3d-render" hidden>Render OFF</button>
     </div>
+    <div class="top-actions">
+      <button id="fitBtn">Вписать</button>
+      <button id="reset3dBtn" hidden>Камера</button>
+      <button id="saveBtn">Сохранить</button>
+      <button id="panelToggle" class="mobile-only">Панели</button>
+    </div>
+  </header>
 
-    <nav class="mobile-bottom-dock" aria-label="Инструменты iPhone">
-      <button onclick="document.getElementById('selectTool').click();document.getElementById('rightPanel').classList.remove('open')"><span class="dock-icon">↖</span><span>Выбор</span></button>
-      <button onclick="document.getElementById('addTextBtn').click();document.querySelector('.panel-tab[data-panel=\'properties\']').click();document.getElementById('rightPanel').classList.add('open')"><span class="dock-icon">T</span><span>Текст</span></button>
-      <button onclick="document.getElementById('imageInput').click()"><span class="dock-icon">▧</span><span>Фото</span></button>
-      <button onclick="document.querySelector('.panel-tab[data-panel=\'layers\']').click();document.getElementById('rightPanel').classList.add('open')"><span class="dock-icon">☷</span><span>Слои</span></button>
-      <button onclick="document.querySelector('.panel-tab[data-panel=\'properties\']').click();document.getElementById('rightPanel').classList.add('open')"><span class="dock-icon">◇</span><span>Вывеска</span></button>
-    </nav>
+  <div class="main-grid">
+    <aside class="leftbar">
+      <button id="selectTool" class="tool active">↖</button>
+      <button id="panTool" class="tool">✋</button>
+      <button id="addArtboardBtn" class="tool">▣</button>
+      <button id="addTextBtn" class="tool">T</button>
+      <button id="addRectBtn" class="tool">▭</button>
+      <label class="tool file-tool">⌁<input id="imageInput" type="file" accept="image/*" hidden /></label>
+      <div class="tool-sep"></div>
+      <button id="zoomOutBtn" class="tool">−</button>
+      <button id="zoomInBtn" class="tool">+</button>
+      <button id="centerBtn" class="tool">◎</button>
+    </aside>
+
+    <main id="viewport" class="viewport" tabindex="0">
+      <div class="viewport-grid"></div>
+      <div id="world" class="world"></div>
+      <div id="threeHost" class="three-host" hidden>
+        <div id="threeLoading" class="three-loading">Строим настоящую 3D-модель…</div>
+      </div>
+      <div class="mode-badge" id="modeBadge">2D · редактирование</div>
+      <div class="statusbar">
+        <span id="toolStatus">Выбор</span><span id="zoomStatus">100%</span><span id="coordStatus">X 0 · Y 0</span>
+      </div>
+    </main>
+
+    <aside id="rightPanel" class="right-panel">
+      <button id="mobileSheetHandle" class="mobile-sheet-handle" aria-label="Закрыть"><span></span></button>
+      <div class="panel-tabs">
+        <button class="panel-tab active" data-panel="layers">Слои</button>
+        <button class="panel-tab" data-panel="artboards">Artboards</button>
+        <button class="panel-tab" data-panel="properties">Вывеска</button>
+      </div>
+      <section id="panel-layers" class="panel-body active">
+        <div class="panel-head"><strong>Слои</strong><button id="duplicateBtn">Дубль</button></div>
+        <div id="layersList" class="list"></div>
+      </section>
+      <section id="panel-artboards" class="panel-body">
+        <div class="panel-head"><strong>Монтажные области</strong><button id="panelAddArtboardBtn">+</button></div>
+        <div id="artboardsList" class="list"></div>
+      </section>
+      <section id="panel-properties" class="panel-body">
+        <div class="panel-head"><strong>Свойства вывески</strong></div>
+        <div id="properties" class="properties empty">Выберите текст или Artboard</div>
+      </section>
+      <div class="panel-footer">
+        <button id="newProjectBtn">Новый</button>
+        <button id="exportBtn">Экспорт JSON</button>
+        <label class="import-label">Импорт JSON<input id="importInput" type="file" accept="application/json,.json" hidden /></label>
+      </div>
+    </aside>
   </div>
 
-  <script src="./app.js"></script>
+  <nav class="mobile-bottom-dock" aria-label="Инструменты">
+    <button id="dockSelect"><span class="dock-icon">↖</span><span>Выбор</span></button>
+    <button id="dockText"><span class="dock-icon">T</span><span>Текст</span></button>
+    <button id="dockPhoto"><span class="dock-icon">▧</span><span>Фото</span></button>
+    <button id="dockLayers"><span class="dock-icon">▤</span><span>Слои</span></button>
+    <button id="dockSign"><span class="dock-icon">◆</span><span>Вывеска</span></button>
+  </nav>
+</div>
+<script type="module" src="./app.js"></script>
 </body>
 </html>
