@@ -171,8 +171,8 @@ struct EditorView: View {
     private func save() { if let data = try? JSONEncoder().encode(document) { UserDefaults.standard.set(data, forKey: "letteringDocumentV1") } }
     private func restore() { if let data = UserDefaults.standard.data(forKey: "letteringDocumentV1"), let value = try? JSONDecoder().decode(LetteringDocument.self, from: data) { document = value } }
 
-    private func importFont(_ result: Result<[URL], Error>) {
-        guard case .success(let urls) = result, let url = urls.first else { return }; let access = url.startAccessingSecurityScopedResource(); defer { if access { url.stopAccessingSecurityScopedResource() } }; var error: Unmanaged<CFError>?
+    private func importFont(_ result: Result<URL, Error>) {
+        guard case .success(let url) = result else { return }; let access = url.startAccessingSecurityScopedResource(); defer { if access { url.stopAccessingSecurityScopedResource() } }; var error: Unmanaged<CFError>?
         if CTFontManagerRegisterFontsForURL(url as CFURL, .process, &error), let list = CTFontManagerCreateFontDescriptorsFromURL(url as CFURL) as? [[CFString: Any]], let name = list.first?[kCTFontNameAttribute] as? String { checkpoint(); set(\.fontName, name) }
     }
     private func export(_ kind: ExportKind) {
