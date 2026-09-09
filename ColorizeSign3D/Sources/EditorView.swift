@@ -55,7 +55,8 @@ struct EditorView: View {
                     } label: {
                         Label(rendered ? "Render ON" : "Render", systemImage: rendered ? "sparkles" : "cube")
                     }
-                    .buttonStyle(rendered ? .borderedProminent : .bordered)
+                    .buttonStyle(.borderedProminent)
+                    .tint(rendered ? .blue : .gray)
                 }
 
                 Button {
