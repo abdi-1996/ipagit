@@ -24,7 +24,7 @@ struct Sign3DView: UIViewRepresentable {
     private func makeScene() -> SCNScene {
         let scene = SCNScene()
         let wall = SCNBox(width: 12, height: 6, length: 0.18, chamferRadius: 0.03)
-        wall.firstMaterial?.diffuse.contents = UIColor(white: isNight ? 0.11 : 0.78, alpha: 1)
+        wall.firstMaterial?.diffuse.contents = wallColor
         wall.firstMaterial?.roughness.contents = 0.82
         let wallNode = SCNNode(geometry: wall)
         wallNode.position = SCNVector3(0, 0, -0.18)
@@ -39,10 +39,10 @@ struct Sign3DView: UIViewRepresentable {
         let material = SCNMaterial()
         material.diffuse.contents = UIColor(Color(hex: project.faceHex))
         material.metalness.contents = project.material == .gold || project.material == .steel ? 0.85 : 0.05
-        material.roughness.contents = project.material == .steel ? 0.25 : 0.38
+        material.roughness.contents = project.material == .steel ? 0.2 : (project.material == .neon ? 0.12 : 0.38)
         if isNight && project.lighting != .none {
             material.emission.contents = UIColor(Color(hex: project.lightHex)).withAlphaComponent(project.brightness)
-            material.emission.intensity = CGFloat(project.lighting == .halo ? 0.35 : project.brightness)
+            material.emission.intensity = CGFloat(project.lighting == .halo ? 0.35 : (project.material == .neon ? project.brightness * 1.4 : project.brightness))
         }
         text.materials = [material]
         let signNode = SCNNode(geometry: text)
@@ -85,6 +85,14 @@ struct Sign3DView: UIViewRepresentable {
         keyNode.eulerAngles = SCNVector3(-0.6, -0.5, 0)
         scene.rootNode.addChildNode(keyNode)
 
+        let ambient = SCNLight()
+        ambient.type = .ambient
+        ambient.color = UIColor(white: isNight ? 0.18 : 0.55, alpha: 1)
+        ambient.intensity = isNight ? 140 : 380
+        let ambientNode = SCNNode()
+        ambientNode.light = ambient
+        scene.rootNode.addChildNode(ambientNode)
+
         let camera = SCNCamera()
         camera.fieldOfView = 48
         let cameraNode = SCNNode()
@@ -93,5 +101,15 @@ struct Sign3DView: UIViewRepresentable {
         scene.rootNode.addChildNode(cameraNode)
         scene.background.contents = isNight ? UIColor.black : UIColor(red: 0.65, green: 0.74, blue: 0.82, alpha: 1)
         return scene
+    }
+
+    private var wallColor: UIColor {
+        if isNight { return UIColor(white: 0.10, alpha: 1) }
+        switch project.facadeFinish {
+        case .brick: return UIColor(red: 0.48, green: 0.22, blue: 0.14, alpha: 1)
+        case .concrete: return UIColor(white: 0.52, alpha: 1)
+        case .dark: return UIColor(white: 0.16, alpha: 1)
+        case .photo: return UIColor(white: 0.78, alpha: 1)
+        }
     }
 }

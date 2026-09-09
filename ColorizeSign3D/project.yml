@@ -18,6 +18,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: kz.colorize.sign3d
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: Colorize Sign 3D
+        MARKETING_VERSION: 2.0
+        CURRENT_PROJECT_VERSION: 20
         INFOPLIST_KEY_NSPhotoLibraryUsageDescription: Выберите фотографию фасада для примерки вывески.
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
