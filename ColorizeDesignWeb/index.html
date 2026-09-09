@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#17191d" />
   <title>Colorize Design Web</title>
   <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="./v05.css" />
   <script type="importmap">
   {
     "imports": {
@@ -18,7 +19,7 @@
 <body>
 <div id="app">
   <header class="topbar">
-    <div class="brand"><strong>COLORIZE<br>DESIGN</strong><span>Web v0.4</span></div>
+    <div class="brand"><strong>COLORIZE<br>DESIGN</strong><span>Web v0.5</span></div>
     <div class="mode-group" aria-label="Режим отображения">
       <button class="mode active" data-mode="2d">2D</button>
       <button class="mode" data-mode="3d">3D</button>
@@ -28,7 +29,7 @@
     </div>
     <div class="top-actions">
       <button id="fitBtn">Вписать</button>
-      <button id="reset3dBtn" hidden>Камера</button>
+      <button id="reset3dBtn" hidden>2D кадр</button>
       <button id="saveBtn">Сохранить</button>
       <button id="panelToggle" class="mobile-only">Панели</button>
     </div>
@@ -95,6 +96,6 @@
     <button id="dockSign"><span class="dock-icon">◆</span><span>Вывеска</span></button>
   </nav>
 </div>
-<script type="module" src="./app.js"></script>
+<script type="module" src="./boot-v05.js"></script>
 </body>
 </html>
