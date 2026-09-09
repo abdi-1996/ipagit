@@ -45,14 +45,14 @@ jobs:
         run: |
           mkdir -p Payload
           cp -R build/Build/Products/Release-iphoneos/ColorizeSign3D.app Payload/
-          /usr/bin/zip -qry ColorizeSign3D-v1.0-unsigned.ipa Payload
-          test -s ColorizeSign3D-v1.0-unsigned.ipa
+          /usr/bin/zip -qry ColorizeSign3D-v1.1-unsigned.ipa Payload
+          test -s ColorizeSign3D-v1.1-unsigned.ipa
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
-          name: ColorizeSign3D-v1.0-IPA
-          path: ColorizeSign3D/ColorizeSign3D-v1.0-unsigned.ipa
+          name: ColorizeSign3D-v1.1-IPA
+          path: ColorizeSign3D/ColorizeSign3D-v1.1-unsigned.ipa
           if-no-files-found: error
           retention-days: 30
 
