@@ -31,11 +31,13 @@ struct Sign3DView: UIViewRepresentable {
         scene.rootNode.addChildNode(wallNode)
 
         let text = SCNText(string: project.text, extrusionDepth: CGFloat(project.depthCM / 35))
-        text.font = .systemFont(ofSize: 1.2, weight: .black)
+        text.font = project.font == .classic
+            ? UIFont(name: "TimesNewRomanPS-BoldMT", size: 1.2)
+            : .systemFont(ofSize: 1.2, weight: .black)
         text.flatness = 0.15
         text.chamferRadius = 0.025
         let material = SCNMaterial()
-        material.diffuse.contents = UIColor(project.material.color)
+        material.diffuse.contents = UIColor(Color(hex: project.faceHex))
         material.metalness.contents = project.material == .gold || project.material == .steel ? 0.85 : 0.05
         material.roughness.contents = project.material == .steel ? 0.25 : 0.38
         if isNight && project.lighting != .none {
@@ -51,6 +53,16 @@ struct Sign3DView: UIViewRepresentable {
         signNode.scale = SCNVector3(scale, scale, scale)
         signNode.position = SCNVector3(-targetWidth / 2, -0.45, 0.08)
         scene.rootNode.addChildNode(signNode)
+
+        if project.hasPanel {
+            let panel = SCNBox(width: CGFloat(targetWidth + 0.7), height: 1.75, length: 0.12, chamferRadius: 0.08)
+            panel.firstMaterial?.diffuse.contents = UIColor(Color(hex: project.panelHex))
+            panel.firstMaterial?.roughness.contents = 0.55
+            let panelNode = SCNNode(geometry: panel)
+            panelNode.position = SCNVector3(0, 0, -0.02)
+            scene.rootNode.addChildNode(panelNode)
+            signNode.position.z = 0.13
+        }
 
         if isNight && project.lighting != .none {
             let light = SCNLight()
