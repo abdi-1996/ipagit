@@ -3,7 +3,6 @@ import * as THREE from 'three';
 const PROJECT_KEYS=['colorize-design-web-v04','colorize-design-web-v03','colorize-design-web-v02','colorize-design-web-v01'];
 const SETTINGS_KEY='colorize-realtime-3d-v011';
 const mobile=()=>matchMedia('(max-width:900px)').matches;
-const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 
 const PRESETS={
   studio:{exposure:1.03,reflections:1.30,key:3.25,ambient:.92,shadow:3.0,keyColor:'#fff7ee',rimColor:'#bfd8ff'},
@@ -21,9 +20,8 @@ function loadSettings(){
 }
 function saveSettings(){try{localStorage.setItem(SETTINGS_KEY,JSON.stringify(settings))}catch{}}
 
-// The old 3D engine already has a hidden high-quality switch. Keep it permanently ON,
-// while removing that switch from the user interface. This gives us the denser bevels,
-// physical base materials and higher quality shadows as the starting point for realtime 3D.
+// Use the old engine's internal high-quality branch permanently, but do not expose
+// a separate Render mode to the user. It gives denser bevels and physical base materials.
 for(const key of PROJECT_KEYS){
   try{
     const raw=localStorage.getItem(key);if(!raw)continue;
@@ -90,7 +88,7 @@ async function ensureEnvironment(renderer,scene){
   scene.userData.colorizeEnvironmentLoading11=true;
   try{
     const {RoomEnvironment}=await import('three/addons/environments/RoomEnvironment.js');
-    if(capturedScene!==scene||capturedRenderer!==renderer)return;
+    if(capturedScene!==scene||capturedRenderer!==renderer){scene.userData.colorizeEnvironmentLoading11=false;return}
     const pmrem=new THREE.PMREMGenerator(renderer);pmrem.compileEquirectangularShader();
     const room=new RoomEnvironment();const rt=pmrem.fromScene(room,.04);
     room.dispose?.();pmrem.dispose();
@@ -133,7 +131,7 @@ function applyScene(renderer,scene){
   }finally{applying=false}
 }
 
-// Capture only the editor's actual 3D canvas. The existing v0.5 camera synchronizer remains intact.
+// Capture only the editor's real 3D canvas. v0.5 still owns the exact 2D→3D camera framing.
 const previousRender=THREE.WebGLRenderer.prototype.render;
 THREE.WebGLRenderer.prototype.render=function(scene,camera){
   const host=document.getElementById('threeHost');
@@ -171,7 +169,7 @@ function lightingPanelMarkup(){return `
     <div><b>ПВХ</b><span>матовая плотная поверхность</span></div>
     <div><b>Металл</b><span>реальные отражения и металлический блеск</span></div>
     <div><b>Композит</b><span>полуматовая окрашенная поверхность</span></div>
-    <div class="lighting-note">Отдельного Render больше нет: эти материалы, отражения, подсветка и тени отображаются сразу в 3D.</div>
+    <div class="lighting-note">Отдельного Render больше нет: материалы, отражения, подсветка и тени отображаются сразу в 3D.</div>
   </div>`}
 function makePanel(){
   if(document.getElementById('lightingPanel'))return;
@@ -197,7 +195,8 @@ function togglePanel(force){
 function cleanUi(){
   document.getElementById('globalRenderBtn')?.remove();
   const internal=document.getElementById('view3dRenderBtn');if(internal)internal.style.display='none';
-  const note=document.querySelector('.colorize-font-note');if(note)note.textContent='Один и тот же контур используется в 2D и 3D — форма букв не меняется.';
+  const text='Один и тот же контур используется в 2D и 3D — форма букв не меняется.';
+  const note=document.querySelector('.colorize-font-note');if(note&&note.textContent!==text)note.textContent=text;
   const host=document.getElementById('threeHost');
   const badge=document.getElementById('modeBadge');
   if(host&&!host.hidden&&badge&&badge.textContent!=='3D · реалистичные PBR материалы')badge.textContent='3D · реалистичные PBR материалы';
