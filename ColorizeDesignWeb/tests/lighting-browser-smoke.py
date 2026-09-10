@@ -76,7 +76,7 @@ try:
     time.sleep(.5)
     eval_js("""(()=>{const s=document.createElement('style');s.id='smoke-hide-ui';s.textContent='#lightingPanel,#edit3dToolbar,.mode-badge,.statusbar{visibility:hidden!important}';document.head.appendChild(s);return true})()""")
 
-    def set_slider(id,value,wait_ms=900):
+    def set_slider(id,value,wait_ms=700):
         return eval_js(f"""(async()=>{{const wait=t=>new Promise(r=>setTimeout(r,t));const el=document.getElementById('{id}');if(!el)return 'NO_SLIDER';el.value='{value}';el.dispatchEvent(new Event('input',{{bubbles:true}}));await wait({wait_ms});return el.value}})()""",True)
     def debug(): return eval_js("typeof window.__colorizeLightingDebug==='function'?window.__colorizeLightingDebug():null")
     def canvas_clip():
@@ -97,23 +97,39 @@ try:
     set_slider('mainExposure',1.6)
     d_exp_high=debug();h_exp_high,_=snap()
 
+    set_slider('mainExposure',1.04)
+    set_slider('mainIntensity',4)
+    set_slider('mainAngle',-75)
+    d_angle_left=debug();h_angle_left,_=snap()
+    set_slider('mainAngle',75)
+    d_angle_right=debug();h_angle_right,_=snap()
+
     print('DEBUG LOW ',json.dumps(d_low,ensure_ascii=False))
     print('DEBUG HIGH',json.dumps(d_high,ensure_ascii=False))
     print('DEBUG EXP LOW ',json.dumps(d_exp_low,ensure_ascii=False))
     print('DEBUG EXP HIGH',json.dumps(d_exp_high,ensure_ascii=False))
+    print('DEBUG ANGLE LEFT ',json.dumps(d_angle_left,ensure_ascii=False))
+    print('DEBUG ANGLE RIGHT',json.dumps(d_angle_right,ensure_ascii=False))
     print('INTENSITY HASH LOW/HIGH',h_low,h_high)
     print('EXPOSURE HASH LOW/HIGH ',h_exp_low,h_exp_high)
+    print('ANGLE HASH LEFT/RIGHT ',h_angle_left,h_angle_right)
 
     state_ok=(d_low and d_high and float(d_low.get('keyIntensity') or -1)<1 and float(d_high.get('keyIntensity') or -1)>5)
     exposure_state_ok=(d_exp_low and d_exp_high and float(d_exp_low.get('exposure') or -1)<.8 and float(d_exp_high.get('exposure') or -1)>1.4)
-    visual_ok=(h_low!=h_high) and (h_exp_low!=h_exp_high)
+    left_pos=(d_angle_left or {}).get('keyPosition') or []
+    right_pos=(d_angle_right or {}).get('keyPosition') or []
+    angle_state_ok=(len(left_pos)==3 and len(right_pos)==3 and abs(float(left_pos[0])-float(right_pos[0]))>5)
+    direct_ok=float((d_angle_right or {}).get('directUpdates') or 0)>0
+    visual_ok=(h_low!=h_high) and (h_exp_low!=h_exp_high) and (h_angle_left!=h_angle_right)
     if not state_ok: raise RuntimeError('STATE FAIL: renderer light intensity does not follow the slider')
     if not exposure_state_ok: raise RuntimeError('STATE FAIL: renderer exposure does not follow the slider')
+    if not angle_state_ok: raise RuntimeError('STATE FAIL: light angle does not move the real directional light')
+    if not direct_ok: raise RuntimeError('STATE FAIL: direct realtime UI bridge did not reach the renderer')
     if not visual_ok:
         open('/tmp/colorize-light-low.png','wb').write(raw_low);open('/tmp/colorize-light-high.png','wb').write(raw_high)
-        raise RuntimeError('VISUAL FAIL: renderer state changes, but the visible 3D viewport pixels do not')
+        raise RuntimeError('VISUAL FAIL: intensity/exposure/angle state changes, but visible 3D viewport pixels do not')
 
-    print('lighting-browser-smoke: PASS — state and visible canvas both change live')
+    print('lighting-browser-smoke: PASS — intensity, exposure and angle change the visible viewport in realtime')
 finally:
     try:
         if ws: ws.close()
