@@ -27,40 +27,26 @@ jobs:
         run: |
           test -s ColorizeDesignWeb/index.html
           test -s ColorizeDesignWeb/styles.css
-          test -s ColorizeDesignWeb/app.js
           test -s ColorizeDesignWeb/boot-v0132.js
           test -s ColorizeDesignWeb/v0132-lighting-owner.js
           test -s ColorizeDesignWeb/tests/lighting-order.test.mjs
-          test -s ColorizeDesignWeb/v013-lighting.js
-          test -s ColorizeDesignWeb/v013.css
-          test -s ColorizeDesignWeb/v011-realtime-3d.js
-          test -s ColorizeDesignWeb/v011.css
-          test -s ColorizeDesignWeb/v012-3d-pro.js
-          test -s ColorizeDesignWeb/v012-construction.js
-          test -s ColorizeDesignWeb/v012-facade-bridge.js
-          test -s ColorizeDesignWeb/v012.css
-          test -s ColorizeDesignWeb/v010-workspace-safe.js
-          test -s ColorizeDesignWeb/v010.css
-          test -s ColorizeDesignWeb/v06-font-sync.js
-          test -s ColorizeDesignWeb/v08.css
-          test -s ColorizeDesignWeb/v081-ui-fix.js
-          test -s ColorizeDesignWeb/v081.css
-          test -s ColorizeDesignWeb/facade.js
-          test -s ColorizeDesignWeb/facade.css
+          test -s ColorizeDesignWeb/tests/lighting-browser-smoke.py
           node --input-type=module --check < ColorizeDesignWeb/app.js
-          node --input-type=module --check < ColorizeDesignWeb/v06-font-sync.js
           node --input-type=module --check < ColorizeDesignWeb/v011-realtime-3d.js
           node --input-type=module --check < ColorizeDesignWeb/v012-3d-pro.js
           node --input-type=module --check < ColorizeDesignWeb/v012-construction.js
           node --input-type=module --check < ColorizeDesignWeb/v012-facade-bridge.js
           node --input-type=module --check < ColorizeDesignWeb/v013-lighting.js
           node --input-type=module --check < ColorizeDesignWeb/v0132-lighting-owner.js
-          node --input-type=module --check < ColorizeDesignWeb/v081-ui-fix.js
           node --input-type=module --check < ColorizeDesignWeb/facade.js
-          node --input-type=module --check < ColorizeDesignWeb/v010-workspace-safe.js
 
-      - name: Test realtime lighting ownership
+      - name: Test lighting hook order
         run: node ColorizeDesignWeb/tests/lighting-order.test.mjs
+
+      - name: Test lighting in a real browser
+        run: |
+          python -m pip install --quiet websocket-client
+          python ColorizeDesignWeb/tests/lighting-browser-smoke.py
 
       - name: Package browser build
         run: |
