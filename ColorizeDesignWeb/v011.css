@@ -1,0 +1,7 @@
+/* v0.11: realtime PBR 3D replaces the separate Render workflow */
+#globalRenderBtn,#view3dRenderBtn{display:none!important}
+.mode-group{gap:7px}.mode-group .mode[data-mode="view3d"]{min-width:62px;font-weight:700}
+.realtime-lighting-panel .material-guide{gap:7px}.realtime-lighting-panel .material-guide>div:not(.lighting-note){display:grid;grid-template-columns:74px 1fr;gap:8px;align-items:center;padding:7px 8px;border-radius:9px;background:rgba(255,255,255,.035);font-size:10px}.realtime-lighting-panel .material-guide b{font-size:11px;color:#f1f5f9}.realtime-lighting-panel .material-guide span{color:#9ba6b4;line-height:1.25}.realtime-lighting-panel select{min-height:32px}
+#threeHost canvas{image-rendering:auto}.three-loading{backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+@media(max-width:900px){.realtime-lighting-panel{max-height:min(var(--workspace-sheet-h,340px),45dvh)!important;bottom:calc(64px + env(safe-area-inset-bottom))!important}.realtime-lighting-panel .lighting-section{padding:8px 0}.realtime-lighting-panel .material-guide>div:not(.lighting-note){grid-template-columns:66px 1fr}.lighting-btn{min-width:60px}}
+@media(max-width:520px){.realtime-lighting-panel .material-guide>div:not(.lighting-note){font-size:9px}.realtime-lighting-panel .material-guide b{font-size:10px}}
