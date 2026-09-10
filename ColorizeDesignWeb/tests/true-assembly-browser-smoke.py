@@ -24,7 +24,6 @@ try:
     ws=websocket.create_connection(page['webSocketDebuggerUrl'],timeout=30)
     cid=0
     def call(method,params=None):
-        nonlocal_box={}
         global cid;cid+=1;my=cid;ws.send(json.dumps({'id':my,'method':method,'params':params or {}}))
         while True:
             m=json.loads(ws.recv())
@@ -53,12 +52,15 @@ try:
     if not (br[1] < rr[0]): raise RuntimeError(f'Z-FIGHT FAIL: back overlaps return: back={br}, return={rr}')
     def clip(): return evaluate("""(()=>{const c=document.querySelector('#threeHost canvas'),r=c.getBoundingClientRect();return{x:r.left,y:r.top,width:r.width,height:r.height,scale:1}})()""")
     def snap(): return hashlib.sha256(base64.b64decode(call('Page.captureScreenshot',{'format':'png','clip':clip(),'fromSurface':True})['data'])).hexdigest()
+    trim_dbg=evaluate("""(async()=>{const w=t=>new Promise(r=>setTimeout(r,t));window.__colorizeAssemblySetConfig?.({assemblyType:'faceLit',edgeStyle:'trimcap',acrylicLook:'milk',returnFinish:'matte'});await w(950);return window.__colorizeAssembly15Debug?.()})()""",True)
     h1=snap()
-    evaluate("""(async()=>{const w=t=>new Promise(r=>setTimeout(r,t));window.__colorizeAssemblySetConfig?.({assemblyType:'trimless',edgeStyle:'trimless',acrylicLook:'milk',returnFinish:'matte'});await w(900);return window.__colorizeAssembly15Debug?.()})()""",True)
+    trimless_dbg=evaluate("""(async()=>{const w=t=>new Promise(r=>setTimeout(r,t));window.__colorizeAssemblySetConfig?.({assemblyType:'faceLit',edgeStyle:'trimless',acrylicLook:'milk',returnFinish:'matte'});await w(950);return window.__colorizeAssembly15Debug?.()})()""",True)
     h2=snap()
+    print('V015 TRIM',json.dumps(trim_dbg,ensure_ascii=False))
+    print('V015 TRIMLESS',json.dumps(trimless_dbg,ensure_ascii=False))
     if h1==h2: raise RuntimeError('VISUAL FAIL: trim-cap to trimless did not change viewport')
     print('V015 HASH TRIM/TRIMLESS',h1,h2)
-    print('true-assembly-browser-smoke: PASS — face, return and back are separated and visible geometry changes cleanly')
+    print('true-assembly-browser-smoke: PASS — face, return and back are separated and trim geometry changes the visible viewport')
 finally:
     try:
         if ws: ws.close()
