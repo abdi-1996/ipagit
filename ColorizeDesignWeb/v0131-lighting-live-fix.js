@@ -41,11 +41,6 @@ function mainDirection(s){
   const v=new THREE.Vector3(Math.sin(a)*Math.cos(e),Math.sin(e),Math.cos(a)*Math.cos(e));
   if(v.z<.12)v.z=Math.abs(v.z)+.15;return v.normalize();
 }
-function hdrDirection(s){
-  const base=scene?.userData?.colorizeLightingHdrDominant13;
-  const v=(base?.isVector3?base.clone():new THREE.Vector3(-.45,.7,.55));
-  return v.applyAxisAngle(new THREE.Vector3(0,1,0),THREE.MathUtils.degToRad(Number(s.hdr.rotation)||0)).normalize();
-}
 function applyDirect(s){
   if(!renderer||!scene)return;
   const dirs=[],hems=[];
@@ -54,9 +49,11 @@ function applyDirect(s){
   for(let i=1;i<dirs.length;i++)dirs[i].visible=false;
   if(key){
     key.visible=true;key.castShadow=true;
-    const dir=s.mode==='hdr'?hdrDirection(s):mainDirection(s);
-    key.position.copy(dir.multiplyScalar(18));
-    if(key.position.z<2)key.position.z=2;
+    // In HDR mode v0.13 already derives the dominant light direction from the actual HDR map.
+    // Do not replace it here; only the basic-light mode uses the manual angle/elevation controls.
+    if(s.mode==='main'){
+      const dir=mainDirection(s);key.position.copy(dir.multiplyScalar(18));if(key.position.z<2)key.position.z=2;
+    }
     key.intensity=s.mode==='hdr'?clamp(s.hdr.shadowStrength,0,1.5)*3:clamp(s.main.intensity,.05,8);
     key.shadow.radius=s.mode==='hdr'?clamp(s.hdr.shadowSoftness,0,12):clamp(s.main.shadowSoftness,0,12);
     key.shadow.bias=-.00012;key.shadow.normalBias=.018;
