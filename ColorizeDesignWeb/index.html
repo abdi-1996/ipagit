@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="./v081.css" />
   <link rel="stylesheet" href="./facade.css" />
   <link rel="stylesheet" href="./v010.css" />
+  <link rel="stylesheet" href="./v011.css" />
   <script type="importmap">
   {
     "imports": {
@@ -25,13 +26,12 @@
 <body>
 <div id="app">
   <header class="topbar">
-    <div class="brand"><strong>COLORIZE<br>DESIGN</strong><span>Web v0.10</span></div>
+    <div class="brand"><strong>COLORIZE<br>DESIGN</strong><span>Web v0.11</span></div>
     <div class="mode-group" aria-label="Режим отображения">
       <button class="mode active" data-mode="2d">2D</button>
       <button class="mode" data-mode="view3d">3D</button>
-      <button id="globalRenderBtn" class="global-render">Render</button>
       <button id="lightingBtn" class="lighting-btn">Свет</button>
-      <button id="view3dRenderBtn" class="view3d-render" hidden>Render OFF</button>
+      <button id="view3dRenderBtn" class="view3d-render" hidden aria-hidden="true">Render OFF</button>
     </div>
     <div class="top-actions">
       <button id="fitBtn">Вписать</button>
@@ -59,7 +59,7 @@
       <div class="viewport-grid"></div>
       <div id="world" class="world"></div>
       <div id="threeHost" class="three-host" hidden>
-        <div id="threeLoading" class="three-loading">Строим настоящую 3D-модель…</div>
+        <div id="threeLoading" class="three-loading">Строим реалистичную 3D-модель…</div>
       </div>
       <div class="mode-badge" id="modeBadge">2D · редактирование</div>
       <div class="statusbar">
@@ -102,6 +102,6 @@
     <button id="dockSign"><span class="dock-icon">◆</span><span>Вывеска</span></button>
   </nav>
 </div>
-<script type="module" src="./boot-v010.js"></script>
+<script type="module" src="./boot-v011.js"></script>
 </body>
 </html>
