@@ -27,8 +27,8 @@ jobs:
         run: |
           test -s ColorizeDesignWeb/index.html
           test -s ColorizeDesignWeb/styles.css
-          test -s ColorizeDesignWeb/boot-v0132.js
-          test -s ColorizeDesignWeb/v0132-lighting-owner.js
+          test -s ColorizeDesignWeb/boot-v0133.js
+          test -s ColorizeDesignWeb/v0133-lighting-owner.js
           test -s ColorizeDesignWeb/tests/lighting-order.test.mjs
           test -s ColorizeDesignWeb/tests/lighting-browser-smoke.py
           node --input-type=module --check < ColorizeDesignWeb/app.js
@@ -37,7 +37,7 @@ jobs:
           node --input-type=module --check < ColorizeDesignWeb/v012-construction.js
           node --input-type=module --check < ColorizeDesignWeb/v012-facade-bridge.js
           node --input-type=module --check < ColorizeDesignWeb/v013-lighting.js
-          node --input-type=module --check < ColorizeDesignWeb/v0132-lighting-owner.js
+          node --input-type=module --check < ColorizeDesignWeb/v0133-lighting-owner.js
           node --input-type=module --check < ColorizeDesignWeb/facade.js
 
       - name: Test lighting hook order
@@ -51,13 +51,13 @@ jobs:
       - name: Package browser build
         run: |
           cd ColorizeDesignWeb
-          zip -qr ../ColorizeDesignWeb-v0.13.2.zip .
+          zip -qr ../ColorizeDesignWeb-v0.13.3.zip .
 
       - name: Upload downloadable build
         uses: actions/upload-artifact@v4
         with:
-          name: ColorizeDesignWeb-v0.13.2
-          path: ColorizeDesignWeb-v0.13.2.zip
+          name: ColorizeDesignWeb-v0.13.3
+          path: ColorizeDesignWeb-v0.13.3.zip
           retention-days: 30
 
       - name: Configure Pages
