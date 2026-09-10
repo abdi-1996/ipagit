@@ -28,9 +28,9 @@ jobs:
           test -s ColorizeDesignWeb/index.html
           test -s ColorizeDesignWeb/styles.css
           test -s ColorizeDesignWeb/app.js
-          test -s ColorizeDesignWeb/boot-v0131.js
-          test -s ColorizeDesignWeb/v0131-lighting-live-fix.js
-          test -s ColorizeDesignWeb/boot-v013.js
+          test -s ColorizeDesignWeb/boot-v0132.js
+          test -s ColorizeDesignWeb/v0132-lighting-owner.js
+          test -s ColorizeDesignWeb/tests/lighting-order.test.mjs
           test -s ColorizeDesignWeb/v013-lighting.js
           test -s ColorizeDesignWeb/v013.css
           test -s ColorizeDesignWeb/v011-realtime-3d.js
@@ -54,21 +54,24 @@ jobs:
           node --input-type=module --check < ColorizeDesignWeb/v012-construction.js
           node --input-type=module --check < ColorizeDesignWeb/v012-facade-bridge.js
           node --input-type=module --check < ColorizeDesignWeb/v013-lighting.js
-          node --input-type=module --check < ColorizeDesignWeb/v0131-lighting-live-fix.js
+          node --input-type=module --check < ColorizeDesignWeb/v0132-lighting-owner.js
           node --input-type=module --check < ColorizeDesignWeb/v081-ui-fix.js
           node --input-type=module --check < ColorizeDesignWeb/facade.js
           node --input-type=module --check < ColorizeDesignWeb/v010-workspace-safe.js
 
+      - name: Test realtime lighting ownership
+        run: node ColorizeDesignWeb/tests/lighting-order.test.mjs
+
       - name: Package browser build
         run: |
           cd ColorizeDesignWeb
-          zip -qr ../ColorizeDesignWeb-v0.13.1.zip .
+          zip -qr ../ColorizeDesignWeb-v0.13.2.zip .
 
       - name: Upload downloadable build
         uses: actions/upload-artifact@v4
         with:
-          name: ColorizeDesignWeb-v0.13.1
-          path: ColorizeDesignWeb-v0.13.1.zip
+          name: ColorizeDesignWeb-v0.13.2
+          path: ColorizeDesignWeb-v0.13.2.zip
           retention-days: 30
 
       - name: Configure Pages
