@@ -16,23 +16,28 @@ if not browser:
 
 server=subprocess.Popen([sys.executable,'-m','http.server',str(PORT),'--directory',ROOT],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
 profile=tempfile.mkdtemp(prefix='colorize-chrome-')
+chrome_log=open('/tmp/colorize-chrome.log','w+b')
 chrome=subprocess.Popen([
-    browser,'--headless=new','--no-sandbox','--disable-dev-shm-usage','--enable-webgl',
-    '--use-gl=angle','--use-angle=swiftshader','--remote-allow-origins=*',
+    browser,'--headless=new','--no-sandbox','--disable-dev-shm-usage','--remote-allow-origins=*',
     f'--remote-debugging-port={DEBUG_PORT}',f'--user-data-dir={profile}',
     f'http://127.0.0.1:{PORT}/?lighting-smoke=1'
-],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+],stdout=chrome_log,stderr=chrome_log)
 ws=None
 
 try:
-    deadline=time.time()+20; page=None
+    deadline=time.time()+30; page=None
     while time.time()<deadline:
+        if chrome.poll() is not None:
+            chrome_log.flush(); chrome_log.seek(0)
+            raise RuntimeError('Chrome exited early:\n'+chrome_log.read().decode('utf-8','replace')[-4000:])
         try:
             with urllib.request.urlopen(f'http://127.0.0.1:{DEBUG_PORT}/json/list',timeout=1) as r: tabs=json.load(r)
             page=next((t for t in tabs if t.get('type')=='page'),None)
             if page: break
         except Exception: time.sleep(.25)
-    if not page: raise RuntimeError('Chrome DevTools page not available')
+    if not page:
+        chrome_log.flush(); chrome_log.seek(0)
+        raise RuntimeError('Chrome DevTools page not available:\n'+chrome_log.read().decode('utf-8','replace')[-4000:])
 
     ws=websocket.create_connection(page['webSocketDebuggerUrl'],timeout=20)
     call_id=0
@@ -54,11 +59,11 @@ try:
     call('Runtime.enable'); call('Page.enable')
     ok=eval_js("""(async()=>{
       const wait=t=>new Promise(r=>setTimeout(r,t));
-      for(let i=0;i<80;i++){if(document.readyState==='complete')break;await wait(100)}
+      for(let i=0;i<100;i++){if(document.readyState==='complete')break;await wait(100)}
       const b=document.querySelector('.mode[data-mode="view3d"]'); if(!b)return 'NO_3D_BUTTON'; b.click();
-      for(let i=0;i<120;i++){
+      for(let i=0;i<160;i++){
         const c=document.querySelector('#threeHost canvas'),loading=document.getElementById('threeLoading');
-        if(c&&c.width>50&&c.height>50&&loading?.hidden){await wait(500);return 'READY'}
+        if(c&&c.width>50&&c.height>50&&loading?.hidden){await wait(800);return 'READY'}
         await wait(100)
       }
       return 'NOT_READY'
@@ -69,7 +74,7 @@ try:
     time.sleep(.5)
     eval_js("""(()=>{const s=document.createElement('style');s.id='smoke-hide-ui';s.textContent='#lightingPanel,#edit3dToolbar,.mode-badge,.statusbar{visibility:hidden!important}';document.head.appendChild(s);return true})()""")
 
-    def set_slider(id,value,wait_ms=800):
+    def set_slider(id,value,wait_ms=900):
         return eval_js(f"""(async()=>{{const wait=t=>new Promise(r=>setTimeout(r,t));const el=document.getElementById('{id}');if(!el)return 'NO_SLIDER';el.value='{value}';el.dispatchEvent(new Event('input',{{bubbles:true}}));await wait({wait_ms});return el.value}})()""",True)
     def debug(): return eval_js("typeof window.__colorizeLightingDebug==='function'?window.__colorizeLightingDebug():null")
     def canvas_clip():
@@ -111,9 +116,16 @@ finally:
     try:
         if ws: ws.close()
     except Exception: pass
-    chrome.terminate();server.terminate()
+    try: chrome.terminate()
+    except Exception: pass
+    try: server.terminate()
+    except Exception: pass
     try: chrome.wait(timeout=3)
-    except Exception: chrome.kill()
+    except Exception:
+        try: chrome.kill()
+        except Exception: pass
     try: server.wait(timeout=3)
-    except Exception: server.kill()
-    shutil.rmtree(profile,ignore_errors=True)
+    except Exception:
+        try: server.kill()
+        except Exception: pass
+    chrome_log.close();shutil.rmtree(profile,ignore_errors=True)
