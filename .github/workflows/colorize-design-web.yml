@@ -100,7 +100,10 @@ jobs:
             fi
             sleep 2
           done
-          sleep 3
+
+          # GitHub Pages can report deployment_cancelled before its internal deployment lock
+          # is released. Give the Pages backend time to clear that lock before creating v0.13.5.
+          sleep 45
 
       - name: Deploy to GitHub Pages
         id: deployment
