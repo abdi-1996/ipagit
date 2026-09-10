@@ -1,4 +1,4 @@
-import base64, hashlib, json, os, shutil, subprocess, sys, tempfile, time, urllib.request
+import base64, hashlib, json, os, shutil, subprocess, sys, tempfile, time, urllib.parse, urllib.request
 
 try:
     import websocket
@@ -19,27 +19,29 @@ profile=tempfile.mkdtemp(prefix='colorize-chrome-')
 chrome_log=open('/tmp/colorize-chrome.log','w+b')
 chrome=subprocess.Popen([
     browser,'--headless=new','--no-sandbox','--disable-dev-shm-usage','--remote-allow-origins=*',
-    f'--remote-debugging-port={DEBUG_PORT}',f'--user-data-dir={profile}',
-    f'http://127.0.0.1:{PORT}/?lighting-smoke=1'
+    f'--remote-debugging-port={DEBUG_PORT}',f'--user-data-dir={profile}','about:blank'
 ],stdout=chrome_log,stderr=chrome_log)
 ws=None
 
 try:
-    deadline=time.time()+30; page=None
+    deadline=time.time()+30; version=None
     while time.time()<deadline:
         if chrome.poll() is not None:
-            chrome_log.flush(); chrome_log.seek(0)
+            chrome_log.flush();chrome_log.seek(0)
             raise RuntimeError('Chrome exited early:\n'+chrome_log.read().decode('utf-8','replace')[-4000:])
         try:
-            with urllib.request.urlopen(f'http://127.0.0.1:{DEBUG_PORT}/json/list',timeout=1) as r: tabs=json.load(r)
-            page=next((t for t in tabs if t.get('type')=='page'),None)
-            if page: break
+            with urllib.request.urlopen(f'http://127.0.0.1:{DEBUG_PORT}/json/version',timeout=1) as r: version=json.load(r)
+            if version.get('webSocketDebuggerUrl'): break
         except Exception: time.sleep(.25)
-    if not page:
-        chrome_log.flush(); chrome_log.seek(0)
-        raise RuntimeError('Chrome DevTools page not available:\n'+chrome_log.read().decode('utf-8','replace')[-4000:])
+    if not version:
+        chrome_log.flush();chrome_log.seek(0)
+        raise RuntimeError('Chrome DevTools endpoint not available:\n'+chrome_log.read().decode('utf-8','replace')[-4000:])
 
+    target_url=f'http://127.0.0.1:{PORT}/?lighting-smoke=1'
+    req=urllib.request.Request(f'http://127.0.0.1:{DEBUG_PORT}/json/new?{urllib.parse.quote(target_url,safe=":/?=&")}',method='PUT')
+    with urllib.request.urlopen(req,timeout=5) as r: page=json.load(r)
     ws=websocket.create_connection(page['webSocketDebuggerUrl'],timeout=20)
+
     call_id=0
     def call(method,params=None):
         global call_id
@@ -56,12 +58,12 @@ try:
         if res.get('exceptionDetails'): raise RuntimeError('JS exception: '+json.dumps(res['exceptionDetails']))
         return res.get('result',{}).get('value')
 
-    call('Runtime.enable'); call('Page.enable')
+    call('Runtime.enable');call('Page.enable')
     ok=eval_js("""(async()=>{
       const wait=t=>new Promise(r=>setTimeout(r,t));
-      for(let i=0;i<100;i++){if(document.readyState==='complete')break;await wait(100)}
-      const b=document.querySelector('.mode[data-mode="view3d"]'); if(!b)return 'NO_3D_BUTTON'; b.click();
-      for(let i=0;i<160;i++){
+      for(let i=0;i<120;i++){if(document.readyState==='complete'&&document.querySelector('.mode[data-mode="view3d"]'))break;await wait(100)}
+      const b=document.querySelector('.mode[data-mode="view3d"]');if(!b)return 'NO_3D_BUTTON';b.click();
+      for(let i=0;i<180;i++){
         const c=document.querySelector('#threeHost canvas'),loading=document.getElementById('threeLoading');
         if(c&&c.width>50&&c.height>50&&loading?.hidden){await wait(800);return 'READY'}
         await wait(100)
@@ -86,14 +88,14 @@ try:
         return hashlib.sha256(raw).hexdigest(),raw
 
     if set_slider('mainIntensity',.2)=='NO_SLIDER': raise RuntimeError('mainIntensity slider missing')
-    d_low=debug(); h_low,raw_low=snap()
+    d_low=debug();h_low,raw_low=snap()
     set_slider('mainIntensity',6)
-    d_high=debug(); h_high,raw_high=snap()
+    d_high=debug();h_high,raw_high=snap()
 
     set_slider('mainExposure',.65)
-    d_exp_low=debug(); h_exp_low,_=snap()
+    d_exp_low=debug();h_exp_low,_=snap()
     set_slider('mainExposure',1.6)
-    d_exp_high=debug(); h_exp_high,_=snap()
+    d_exp_high=debug();h_exp_high,_=snap()
 
     print('DEBUG LOW ',json.dumps(d_low,ensure_ascii=False))
     print('DEBUG HIGH',json.dumps(d_high,ensure_ascii=False))
@@ -116,16 +118,12 @@ finally:
     try:
         if ws: ws.close()
     except Exception: pass
-    try: chrome.terminate()
-    except Exception: pass
-    try: server.terminate()
-    except Exception: pass
-    try: chrome.wait(timeout=3)
-    except Exception:
-        try: chrome.kill()
-        except Exception: pass
-    try: server.wait(timeout=3)
-    except Exception:
-        try: server.kill()
-        except Exception: pass
+    for p in (chrome,server):
+        try:p.terminate()
+        except Exception:pass
+    for p in (chrome,server):
+        try:p.wait(timeout=3)
+        except Exception:
+            try:p.kill()
+            except Exception:pass
     chrome_log.close();shutil.rmtree(profile,ignore_errors=True)
