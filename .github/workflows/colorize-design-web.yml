@@ -28,10 +28,14 @@ jobs:
           test -s ColorizeDesignWeb/index.html
           test -s ColorizeDesignWeb/styles.css
           test -s ColorizeDesignWeb/three-colorize.js
-          test -s ColorizeDesignWeb/boot-v0135.js
+          test -s ColorizeDesignWeb/boot-v014.js
           test -s ColorizeDesignWeb/v0135-lighting-engine.js
           test -s ColorizeDesignWeb/v0135-lighting-ui-bridge.js
+          test -s ColorizeDesignWeb/v014-assembled-signs.js
+          test -s ColorizeDesignWeb/v014-overlay-guard.js
+          test -s ColorizeDesignWeb/v014.css
           test -s ColorizeDesignWeb/tests/lighting-browser-smoke.py
+          test -s ColorizeDesignWeb/tests/assembled-sign-browser-smoke.py
           node --input-type=module --check < ColorizeDesignWeb/three-colorize.js
           node --input-type=module --check < ColorizeDesignWeb/app.js
           node --input-type=module --check < ColorizeDesignWeb/v011-realtime-3d.js
@@ -41,6 +45,8 @@ jobs:
           node --input-type=module --check < ColorizeDesignWeb/v013-lighting.js
           node --input-type=module --check < ColorizeDesignWeb/v0135-lighting-engine.js
           node --input-type=module --check < ColorizeDesignWeb/v0135-lighting-ui-bridge.js
+          node --input-type=module --check < ColorizeDesignWeb/v014-assembled-signs.js
+          node --input-type=module --check < ColorizeDesignWeb/v014-overlay-guard.js
           node --input-type=module --check < ColorizeDesignWeb/facade.js
 
       - name: Test lighting in a real browser
@@ -48,16 +54,20 @@ jobs:
           python -m pip install --quiet websocket-client
           python ColorizeDesignWeb/tests/lighting-browser-smoke.py
 
+      - name: Test assembled letters in a real browser
+        run: |
+          python ColorizeDesignWeb/tests/assembled-sign-browser-smoke.py
+
       - name: Package browser build
         run: |
           cd ColorizeDesignWeb
-          zip -qr ../ColorizeDesignWeb-v0.13.5.zip .
+          zip -qr ../ColorizeDesignWeb-v0.14.0.zip .
 
       - name: Upload downloadable build
         uses: actions/upload-artifact@v4
         with:
-          name: ColorizeDesignWeb-v0.13.5
-          path: ColorizeDesignWeb-v0.13.5.zip
+          name: ColorizeDesignWeb-v0.14.0
+          path: ColorizeDesignWeb-v0.14.0.zip
           retention-days: 30
 
       - name: Configure Pages
@@ -76,35 +86,6 @@ jobs:
     needs: build
     timeout-minutes: 15
     steps:
-      - name: Clear stale Pages deployment and wait
-        env:
-          GH_TOKEN: ${{ github.token }}
-          STALE_ID: 46db3c3abb41929d1e8299643f8d6db417cb729b
-        run: |
-          curl -L -sS -o /dev/null -w "cancel=%{http_code}\n" \
-            -X POST \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/${{ github.repository }}/pages/deployments/$STALE_ID/cancel" || true
-
-          for i in {1..45}; do
-            BODY=$(curl -L -sS \
-              -H "Accept: application/vnd.github+json" \
-              -H "Authorization: Bearer $GH_TOKEN" \
-              -H "X-GitHub-Api-Version: 2022-11-28" \
-              "https://api.github.com/repos/${{ github.repository }}/pages/deployments/$STALE_ID" || true)
-            echo "stale deployment: $BODY"
-            if ! echo "$BODY" | grep -Eq 'updating_pages|in_progress|queued|pending'; then
-              break
-            fi
-            sleep 2
-          done
-
-          # GitHub Pages can report deployment_cancelled before its internal deployment lock
-          # is released. Give the Pages backend time to clear that lock before creating v0.13.5.
-          sleep 45
-
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
