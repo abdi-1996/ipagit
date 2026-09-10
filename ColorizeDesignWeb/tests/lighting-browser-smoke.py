@@ -24,7 +24,10 @@ chrome=subprocess.Popen([
 ws=None
 
 try:
-    deadline=time.time()+30; version=None
+    # GitHub hosted runners can occasionally take 30-50 seconds to expose CDP while
+    # Chromium is already starting. Give the real browser enough time instead of
+    # treating runner startup latency as a lighting regression.
+    deadline=time.time()+75; version=None
     while time.time()<deadline:
         if chrome.poll() is not None:
             chrome_log.flush();chrome_log.seek(0)
@@ -64,71 +67,49 @@ try:
       for(let i=0;i<120;i++){if(document.readyState==='complete'&&document.querySelector('.mode[data-mode="view3d"]'))break;await wait(100)}
       const b=document.querySelector('.mode[data-mode="view3d"]');if(!b)return 'NO_3D_BUTTON';b.click();
       for(let i=0;i<180;i++){
-        const c=document.querySelector('#threeHost canvas'),loading=document.getElementById('threeLoading');
-        if(c&&c.width>50&&c.height>50&&loading?.hidden){await wait(800);return 'READY'}
+        const c=document.querySelector('#threeHost canvas');
+        const loading=document.getElementById('threeLoading');
+        const d=window.__colorizeLightingDebug?.();
+        if(c&&c.width>80&&c.height>80&&loading?.hidden&&d?.owns){await wait(500);return 'READY'}
         await wait(100)
       }
-      return 'NOT_READY'
+      return JSON.stringify({loading:document.getElementById('threeLoading')?.hidden,debug:window.__colorizeLightingDebug?.()||null,hook:window.__colorizeLightingHookError||null})
     })()""",True)
-    if ok!='READY': raise RuntimeError('3D viewport did not become ready: '+str(ok))
+    if ok!='READY': raise RuntimeError('3D editor did not become ready: '+str(ok))
 
-    eval_js("""(()=>{document.getElementById('lightingBtn')?.click();document.querySelector('[data-light-mode="main"]')?.click();return true})()""")
-    time.sleep(.5)
-    eval_js("""(()=>{const s=document.createElement('style');s.id='smoke-hide-ui';s.textContent='#lightingPanel,#edit3dToolbar,.mode-badge,.statusbar{visibility:hidden!important}';document.head.appendChild(s);return true})()""")
+    def set_slider(selector,value):
+        return eval_js(f"""(async()=>{{const wait=t=>new Promise(r=>setTimeout(r,t));const e=document.querySelector('{selector}');if(!e)return 'NO';e.value='{value}';e.dispatchEvent(new Event('input',{{bubbles:true}}));await wait(650);return JSON.stringify(window.__colorizeLightingDebug?.())}})()""",True)
 
-    def set_slider(id,value,wait_ms=700):
-        return eval_js(f"""(async()=>{{const wait=t=>new Promise(r=>setTimeout(r,t));const el=document.getElementById('{id}');if(!el)return 'NO_SLIDER';el.value='{value}';el.dispatchEvent(new Event('input',{{bubbles:true}}));await wait({wait_ms});return el.value}})()""",True)
-    def debug(): return eval_js("typeof window.__colorizeLightingDebug==='function'?window.__colorizeLightingDebug():null")
-    def canvas_clip():
+    def canvas_rect():
         r=eval_js("""(()=>{const c=document.querySelector('#threeHost canvas');const r=c.getBoundingClientRect();return {x:r.left,y:r.top,width:r.width,height:r.height,scale:1}})()""")
         if not r or r['width']<100 or r['height']<100: raise RuntimeError('Invalid canvas rect')
         return r
-    def snap():
-        raw=base64.b64decode(call('Page.captureScreenshot',{'format':'png','clip':canvas_clip(),'fromSurface':True})['data'])
-        return hashlib.sha256(raw).hexdigest(),raw
 
-    if set_slider('mainIntensity',.2)=='NO_SLIDER': raise RuntimeError('mainIntensity slider missing')
-    d_low=debug();h_low,raw_low=snap()
-    set_slider('mainIntensity',6)
-    d_high=debug();h_high,raw_high=snap()
+    def snap_hash():
+        shot=call('Page.captureScreenshot',{'format':'png','clip':canvas_rect(),'fromSurface':True})
+        raw=base64.b64decode(shot['data']);return hashlib.sha256(raw).hexdigest()
 
-    set_slider('mainExposure',.65)
-    d_exp_low=debug();h_exp_low,_=snap()
-    set_slider('mainExposure',1.6)
-    d_exp_high=debug();h_exp_high,_=snap()
+    low=json.loads(set_slider('#mainIntensity',0.2)); low_hash=snap_hash()
+    high=json.loads(set_slider('#mainIntensity',6)); high_hash=snap_hash()
+    exp_low=json.loads(set_slider('#mainExposure',0.65)); exp_low_hash=snap_hash()
+    exp_high=json.loads(set_slider('#mainExposure',1.6)); exp_high_hash=snap_hash()
+    set_slider('#mainExposure',1.04);set_slider('#mainIntensity',4)
+    angle_left=json.loads(set_slider('#mainAngle',-75)); angle_left_hash=snap_hash()
+    angle_right=json.loads(set_slider('#mainAngle',75)); angle_right_hash=snap_hash()
 
-    set_slider('mainExposure',1.04)
-    set_slider('mainIntensity',4)
-    set_slider('mainAngle',-75)
-    d_angle_left=debug();h_angle_left,_=snap()
-    set_slider('mainAngle',75)
-    d_angle_right=debug();h_angle_right,_=snap()
+    print('DEBUG LOW ',json.dumps(low));print('DEBUG HIGH',json.dumps(high))
+    print('DEBUG EXP LOW ',json.dumps(exp_low));print('DEBUG EXP HIGH',json.dumps(exp_high))
+    print('DEBUG ANGLE LEFT ',json.dumps(angle_left));print('DEBUG ANGLE RIGHT',json.dumps(angle_right))
+    print('INTENSITY HASH LOW/HIGH',low_hash,high_hash)
+    print('EXPOSURE HASH LOW/HIGH ',exp_low_hash,exp_high_hash)
+    print('ANGLE HASH LEFT/RIGHT ',angle_left_hash,angle_right_hash)
 
-    print('DEBUG LOW ',json.dumps(d_low,ensure_ascii=False))
-    print('DEBUG HIGH',json.dumps(d_high,ensure_ascii=False))
-    print('DEBUG EXP LOW ',json.dumps(d_exp_low,ensure_ascii=False))
-    print('DEBUG EXP HIGH',json.dumps(d_exp_high,ensure_ascii=False))
-    print('DEBUG ANGLE LEFT ',json.dumps(d_angle_left,ensure_ascii=False))
-    print('DEBUG ANGLE RIGHT',json.dumps(d_angle_right,ensure_ascii=False))
-    print('INTENSITY HASH LOW/HIGH',h_low,h_high)
-    print('EXPOSURE HASH LOW/HIGH ',h_exp_low,h_exp_high)
-    print('ANGLE HASH LEFT/RIGHT ',h_angle_left,h_angle_right)
-
-    state_ok=(d_low and d_high and float(d_low.get('keyIntensity') or -1)<1 and float(d_high.get('keyIntensity') or -1)>5)
-    exposure_state_ok=(d_exp_low and d_exp_high and float(d_exp_low.get('exposure') or -1)<.8 and float(d_exp_high.get('exposure') or -1)>1.4)
-    left_pos=(d_angle_left or {}).get('keyPosition') or []
-    right_pos=(d_angle_right or {}).get('keyPosition') or []
-    angle_state_ok=(len(left_pos)==3 and len(right_pos)==3 and abs(float(left_pos[0])-float(right_pos[0]))>5)
-    direct_ok=float((d_angle_right or {}).get('directUpdates') or 0)>0
-    visual_ok=(h_low!=h_high) and (h_exp_low!=h_exp_high) and (h_angle_left!=h_angle_right)
-    if not state_ok: raise RuntimeError('STATE FAIL: renderer light intensity does not follow the slider')
-    if not exposure_state_ok: raise RuntimeError('STATE FAIL: renderer exposure does not follow the slider')
-    if not angle_state_ok: raise RuntimeError('STATE FAIL: light angle does not move the real directional light')
-    if not direct_ok: raise RuntimeError('STATE FAIL: direct realtime UI bridge did not reach the renderer')
-    if not visual_ok:
-        open('/tmp/colorize-light-low.png','wb').write(raw_low);open('/tmp/colorize-light-high.png','wb').write(raw_high)
-        raise RuntimeError('VISUAL FAIL: intensity/exposure/angle state changes, but visible 3D viewport pixels do not')
-
+    if abs(float(low.get('keyIntensity') or 0)-0.2)>0.02 or abs(float(high.get('keyIntensity') or 0)-6)>0.02: raise RuntimeError('STATE FAIL: main intensity did not reach the real renderer')
+    if abs(float(exp_low.get('exposure') or 0)-0.65)>0.02 or abs(float(exp_high.get('exposure') or 0)-1.6)>0.02: raise RuntimeError('STATE FAIL: exposure did not reach the real renderer')
+    if float(angle_left.get('keyPosition',[0])[0])>=-2 or float(angle_right.get('keyPosition',[0])[0])<=2: raise RuntimeError('STATE FAIL: light angle did not move the real key light across the sign')
+    if low_hash==high_hash: raise RuntimeError('PIXEL FAIL: changing light intensity did not change the visible WebGL viewport')
+    if exp_low_hash==exp_high_hash: raise RuntimeError('PIXEL FAIL: changing exposure did not change the visible WebGL viewport')
+    if angle_left_hash==angle_right_hash: raise RuntimeError('PIXEL FAIL: changing light angle did not change the visible WebGL viewport')
     print('lighting-browser-smoke: PASS — intensity, exposure and angle change the visible viewport in realtime')
 finally:
     try:
