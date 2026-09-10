@@ -28,16 +28,19 @@ jobs:
           test -s ColorizeDesignWeb/index.html
           test -s ColorizeDesignWeb/styles.css
           test -s ColorizeDesignWeb/three-colorize.js
-          test -s ColorizeDesignWeb/boot-v015.js
+          test -s ColorizeDesignWeb/boot-v016.js
           test -s ColorizeDesignWeb/v0135-lighting-engine.js
           test -s ColorizeDesignWeb/v0135-lighting-ui-bridge.js
           test -s ColorizeDesignWeb/v014-assembled-signs.js
           test -s ColorizeDesignWeb/v015-true-assembly.js
+          test -s ColorizeDesignWeb/v016-affinity-workspace.js
+          test -s ColorizeDesignWeb/v016.css
           test -s ColorizeDesignWeb/v014-overlay-guard.js
           test -s ColorizeDesignWeb/v014.css
           test -s ColorizeDesignWeb/tests/lighting-browser-smoke.py
           test -s ColorizeDesignWeb/tests/assembled-sign-browser-smoke.py
           test -s ColorizeDesignWeb/tests/true-assembly-browser-smoke.py
+          test -s ColorizeDesignWeb/tests/affinity-workspace-browser-smoke.py
           node --input-type=module --check < ColorizeDesignWeb/three-colorize.js
           node --input-type=module --check < ColorizeDesignWeb/app.js
           node --input-type=module --check < ColorizeDesignWeb/v011-realtime-3d.js
@@ -50,6 +53,7 @@ jobs:
           node --input-type=module --check < ColorizeDesignWeb/v014-assembled-signs.js
           node --input-type=module --check < ColorizeDesignWeb/v014-overlay-guard.js
           node --input-type=module --check < ColorizeDesignWeb/v015-true-assembly.js
+          node --input-type=module --check < ColorizeDesignWeb/v016-affinity-workspace.js
           node --input-type=module --check < ColorizeDesignWeb/facade.js
 
       - name: Test lighting in a real browser
@@ -65,16 +69,20 @@ jobs:
         run: |
           python ColorizeDesignWeb/tests/true-assembly-browser-smoke.py
 
+      - name: Test Affinity-inspired 2D workspace in a real browser
+        run: |
+          python ColorizeDesignWeb/tests/affinity-workspace-browser-smoke.py
+
       - name: Package browser build
         run: |
           cd ColorizeDesignWeb
-          zip -qr ../ColorizeDesignWeb-v0.15.0.zip .
+          zip -qr ../ColorizeDesignWeb-v0.16.0.zip .
 
       - name: Upload downloadable build
         uses: actions/upload-artifact@v4
         with:
-          name: ColorizeDesignWeb-v0.15.0
-          path: ColorizeDesignWeb-v0.15.0.zip
+          name: ColorizeDesignWeb-v0.16.0
+          path: ColorizeDesignWeb-v0.16.0.zip
           retention-days: 30
 
       - name: Configure Pages
