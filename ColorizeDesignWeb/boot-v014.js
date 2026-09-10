@@ -12,3 +12,4 @@ import './v010-workspace-safe.js';
 import './v013-lighting.js';
 import './v0135-lighting-ui-bridge.js';
 import './v014-assembled-signs.js';
+import './v014-overlay-guard.js';
