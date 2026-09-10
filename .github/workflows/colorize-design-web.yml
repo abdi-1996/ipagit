@@ -28,11 +28,12 @@ jobs:
           test -s ColorizeDesignWeb/index.html
           test -s ColorizeDesignWeb/styles.css
           test -s ColorizeDesignWeb/app.js
-          test -s ColorizeDesignWeb/boot-v010.js
+          test -s ColorizeDesignWeb/boot-v011.js
+          test -s ColorizeDesignWeb/v011-realtime-3d.js
+          test -s ColorizeDesignWeb/v011.css
           test -s ColorizeDesignWeb/v010-workspace-safe.js
           test -s ColorizeDesignWeb/v010.css
           test -s ColorizeDesignWeb/v06-font-sync.js
-          test -s ColorizeDesignWeb/v08-render-engine.js
           test -s ColorizeDesignWeb/v08.css
           test -s ColorizeDesignWeb/v081-ui-fix.js
           test -s ColorizeDesignWeb/v081.css
@@ -40,7 +41,7 @@ jobs:
           test -s ColorizeDesignWeb/facade.css
           node --input-type=module --check < ColorizeDesignWeb/app.js
           node --input-type=module --check < ColorizeDesignWeb/v06-font-sync.js
-          node --input-type=module --check < ColorizeDesignWeb/v08-render-engine.js
+          node --input-type=module --check < ColorizeDesignWeb/v011-realtime-3d.js
           node --input-type=module --check < ColorizeDesignWeb/v081-ui-fix.js
           node --input-type=module --check < ColorizeDesignWeb/facade.js
           node --input-type=module --check < ColorizeDesignWeb/v010-workspace-safe.js
@@ -48,13 +49,13 @@ jobs:
       - name: Package browser build
         run: |
           cd ColorizeDesignWeb
-          zip -qr ../ColorizeDesignWeb-v0.10.zip .
+          zip -qr ../ColorizeDesignWeb-v0.11.zip .
 
       - name: Upload downloadable build
         uses: actions/upload-artifact@v4
         with:
-          name: ColorizeDesignWeb-v0.10
-          path: ColorizeDesignWeb-v0.10.zip
+          name: ColorizeDesignWeb-v0.11
+          path: ColorizeDesignWeb-v0.11.zip
           retention-days: 30
 
       - name: Configure Pages
