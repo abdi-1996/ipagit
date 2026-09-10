@@ -1,0 +1,20 @@
+:root{--workspace-sheet-h:0px}
+@media(max-width:900px){
+  .main-grid{transition:height .24s cubic-bezier(.2,.8,.2,1)}
+  body.workspace-settings-open .main-grid{height:calc(100dvh - 112px - 68px - env(safe-area-inset-bottom) - var(--workspace-sheet-h))}
+  body.workspace-settings-open .viewport{min-height:180px}
+  body.workspace-settings-open .right-panel{height:var(--workspace-sheet-h);max-height:42dvh;transform:translateY(0)}
+  body.workspace-light-open .lighting-panel{height:var(--workspace-sheet-h);max-height:42dvh}
+  .right-panel,.lighting-panel{transition:transform .24s cubic-bezier(.2,.8,.2,1),height .24s cubic-bezier(.2,.8,.2,1)}
+  .right-panel.open{height:min(36dvh,340px)}
+  .lighting-panel:not([hidden]){height:min(36dvh,340px)}
+  .right-panel .panel-body,.lighting-panel{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+  .right-panel .panel-body{padding-bottom:18px}
+  .workspace-preview-safe{position:absolute;inset:0;pointer-events:none;z-index:1;border:0 solid transparent}
+}
+@media(max-width:520px){
+  body.workspace-settings-open .main-grid{height:calc(100dvh - 108px - 68px - env(safe-area-inset-bottom) - var(--workspace-sheet-h))}
+  body.workspace-settings-open .viewport{min-height:150px}
+  body.workspace-settings-open .right-panel,
+  body.workspace-light-open .lighting-panel{max-height:38dvh}
+}
