@@ -42,7 +42,6 @@ try:
 
     call_id=0
     def call(method,params=None):
-        nonlocal_call={'value':None}
         global call_id
         call_id+=1; cid=call_id
         ws.send(json.dumps({'id':cid,'method':method,'params':params or {}}))
@@ -53,18 +52,28 @@ try:
                 return msg.get('result',{})
 
     def eval_js(expr, await_promise=False):
-        res=call('Runtime.evaluate',{'expression':expr,'returnByValue':True,'awaitPromise':await_promise})
-        if res.get('exceptionDetails'): raise RuntimeError('JS exception: '+json.dumps(res['exceptionDetails']))
-        return res.get('result',{}).get('value')
+        last=None
+        for _ in range(12):
+            try:
+                res=call('Runtime.evaluate',{'expression':expr,'returnByValue':True,'awaitPromise':await_promise})
+                if res.get('exceptionDetails'): raise RuntimeError('JS exception: '+json.dumps(res['exceptionDetails']))
+                return res.get('result',{}).get('value')
+            except RuntimeError as e:
+                last=e
+                if 'Execution context was destroyed' not in str(e): raise
+                time.sleep(.25)
+        raise last or RuntimeError('Runtime.evaluate failed')
 
-    call('Runtime.enable');call('Page.enable')
+    call('Runtime.enable');call('Page.enable');time.sleep(.75)
     ready=eval_js("""(async()=>{
       const wait=t=>new Promise(r=>setTimeout(r,t));
       for(let i=0;i<160;i++){
         if(document.readyState==='complete'&&document.querySelector('.mode[data-mode="view3d"]'))break;
         await wait(100);
       }
-      document.querySelector('.mode[data-mode="view3d"]')?.click();
+      const button=document.querySelector('.mode[data-mode="view3d"]');
+      if(!button)return 'NO_3D_BUTTON';
+      button.click();
       for(let i=0;i<220;i++){
         const c=document.querySelector('#threeHost canvas'),loading=document.getElementById('threeLoading');
         if(c&&c.width>80&&c.height>80&&loading?.hidden&&typeof window.__colorizeAssemblyDebug==='function'){
