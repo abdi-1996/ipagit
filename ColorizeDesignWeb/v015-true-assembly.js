@@ -14,6 +14,7 @@ function configFor(o){
 function info(){const p=readProject();const a=p?.artboards?.find(x=>x.id===p.activeArtboardId)||p?.artboards?.[0];return {texts:a?.objects?.filter(x=>x.type==='text')||[]}}
 function col(v,f='#ffffff'){try{return new THREE.Color(v||f)}catch{return new THREE.Color(f)}}
 function envStrength(mult=1){try{const l=JSON.parse(localStorage.getItem('colorize-lighting-v013')||'{}');return (l.mode==='hdr'?Math.max(.15,Number(l.hdr?.intensity)||1.25):.42)*mult}catch{return .42*mult}}
+function signature(mesh,o,cfg){return JSON.stringify([mesh.geometry?.uuid,o?.faceMaterial,o?.faceColor,o?.faceThickness,o?.returnMaterial,o?.sideColor,o?.returnDepth,o?.backMaterial,o?.backColor,o?.backThickness,o?.lightMode,o?.lightColor,o?.lightIntensity,cfg])}
 
 function pvcMaterial(color,finish='matte'){
   const m=new THREE.MeshPhysicalMaterial({color:col(color),metalness:0,transmission:0,ior:1.47,specularIntensity:.55});
@@ -40,7 +41,7 @@ function materialFor(kind,color,finish,look,o){if(kind==='acrylic')return acryli
 function toNonIndexed(g){return g.index?g.toNonIndexed():g.clone()}
 function triGeometry(src,pick,transformZ=null){
   const g=toNonIndexed(src),p=g.getAttribute('position'),n=g.getAttribute('normal');if(!p)return new THREE.BufferGeometry();
-  const pos=[],nor=[];let uv=[];const u=g.getAttribute('uv');
+  const pos=[],nor=[],uv=[];const u=g.getAttribute('uv');
   for(let i=0;i<p.count;i+=3){
     let cz=0,nz=0;for(let j=0;j<3;j++){cz+=p.getZ(i+j);nz+=n?n.getZ(i+j):0}cz/=3;nz/=3;
     if(!pick(cz,nz,i,g))continue;
@@ -53,13 +54,16 @@ function triGeometry(src,pick,transformZ=null){
 }
 function bounds(g){g.computeBoundingBox?.();const b=g.boundingBox;return {min:b?.min?.z??0,max:b?.max?.z??1,depth:Math.max(.001,(b?.max?.z??1)-(b?.min?.z??0))}}
 function zRange(g){g.computeBoundingBox?.();return [Number(g.boundingBox?.min?.z?.toFixed?.(5)??0),Number(g.boundingBox?.max?.z?.toFixed?.(5)??0)]}
-function meshPart(group,name,geo,mat){let m=group.children.find(x=>x.userData?.part15===name);if(!m){m=new THREE.Mesh(geo,mat);m.userData.part15=name;m.castShadow=true;m.receiveShadow=true;group.add(m)}return m}
+function meshPart(group,name,geo,mat){const m=new THREE.Mesh(geo,mat);m.userData.part15=name;m.castShadow=true;m.receiveShadow=true;group.add(m);return m}
 function disposeGroup(g){g.traverse(x=>{if(x!==g){x.geometry?.dispose?.();(Array.isArray(x.material)?x.material:[x.material]).filter(Boolean).forEach(m=>m.dispose?.())}});g.clear()}
+function hideSource(mesh){for(const m of (Array.isArray(mesh.material)?mesh.material:[mesh.material]))if(m)m.visible=false}
 
 function build(mesh,o,cfg){
   const old14=mesh.children.find(x=>x.userData?.colorizeAssemblyOverlay14);if(old14)old14.visible=false;
-  let g=mesh.children.find(x=>x.userData?.colorizeAssembly15);if(g){disposeGroup(g);mesh.remove(g)}
-  g=new THREE.Group();g.userData.colorizeAssembly15=true;mesh.add(g);
+  const sig=signature(mesh,o,cfg);let g=mesh.children.find(x=>x.userData?.colorizeAssembly15);
+  if(g&&g.userData.signature===sig){hideSource(mesh);return g.userData.metrics}
+  if(g){disposeGroup(g);mesh.remove(g)}
+  g=new THREE.Group();g.userData.colorizeAssembly15=true;g.userData.signature=sig;mesh.add(g);
   const b=bounds(mesh.geometry),front=b.max,back=b.min,faceT=Math.max(b.depth*.012,Math.min(b.depth*.18,(Number(o.faceThickness)||3)/45));
   const backT=Math.max(b.depth*.008,Math.min(b.depth*.10,(Number(o.backThickness)||5)/80));
   const eps=Math.max(.0007,b.depth*.0015);
@@ -67,12 +71,10 @@ function build(mesh,o,cfg){
   const backBase=triGeometry(mesh.geometry,(cz,nz)=>cz<back+b.depth*.10&&nz<-.82);
   const sideBase=triGeometry(mesh.geometry,(cz,nz)=>!(cz>front-b.depth*.10&&nz>.82)&&!(cz<back+b.depth*.10&&nz<-.82));
   const flat=cfg.assemblyType==='flatAcrylic'||cfg.assemblyType==='flatPvc';
-  const sideVisible=!flat;
   const faceKind=cfg.assemblyType==='halo'?(o.faceMaterial==='acrylic'?'metal':o.faceMaterial):(cfg.assemblyType==='flatPvc'?'pvc':(o.faceMaterial||'acrylic'));
   const sideKind=o.returnMaterial||'pvc',backKind=o.backMaterial||'pvc';
 
-  const returnMesh=meshPart(g,'return',sideBase,materialFor(sideKind,o.sideColor,cfg.returnFinish,cfg.acrylicLook,o));returnMesh.visible=sideVisible;
-
+  const returnMesh=meshPart(g,'return',sideBase,materialFor(sideKind,o.sideColor,cfg.returnFinish,cfg.acrylicLook,o));returnMesh.visible=!flat;
   const faceEdgeGeo=triGeometry(sideBase,()=>true,z=>front+((z-back)/b.depth)*faceT);
   const faceEdge=meshPart(g,'faceEdge',faceEdgeGeo,materialFor(faceKind,o.faceColor,cfg.returnFinish,cfg.acrylicLook,o));
   const face=meshPart(g,'face',frontBase,materialFor(faceKind,o.faceColor,cfg.returnFinish,cfg.acrylicLook,o));face.position.z=faceT+eps;face.renderOrder=3;
@@ -89,9 +91,9 @@ function build(mesh,o,cfg){
     const panel=meshPart(g,'externalBacking',backBase.clone(),pvcMaterial(cfg.backingColor||'#ffffff',cfg.backingFinish));const isPanel=cfg.externalBacking==='panel'||cfg.assemblyType==='pushThrough';panel.scale.set(isPanel?1.14:1.075,isPanel?1.24:1.075,1);panel.position.z=-backT-eps*3;panel.renderOrder=0;
   }
 
-  for(const m of (Array.isArray(mesh.material)?mesh.material:[mesh.material]))if(m)m.visible=false;
-  const parts=g.children.filter(x=>x.visible!==false);
-  return {parts:parts.length,faceRange:zRange(face.geometry).map(v=>Number((v+face.position.z).toFixed(5))),returnRange:zRange(returnMesh.geometry),backRange:zRange(backMesh.geometry).map(v=>Number((v+backMesh.position.z).toFixed(5))),faceThickness:faceT,assemblyType:cfg.assemblyType};
+  hideSource(mesh);
+  const parts=g.children.filter(x=>x.visible!==false),metrics={parts:parts.length,faceRange:zRange(face.geometry).map(v=>Number((v+face.position.z).toFixed(5))),returnRange:zRange(returnMesh.geometry),backRange:zRange(backMesh.geometry),faceThickness:Number(faceT.toFixed(5)),assemblyType:cfg.assemblyType,sourceHidden:(Array.isArray(mesh.material)?mesh.material:[mesh.material]).every(m=>m?.visible===false)};
+  g.userData.metrics=metrics;return metrics;
 }
 function hideLegacyBacks(scene,primaries){
   const singles=[];scene.traverse(x=>{if(x.isMesh&&x.geometry?.type==='TextGeometry'&&!Array.isArray(x.material)&&!x.material?.isMeshBasicMaterial)singles.push(x)});
@@ -109,4 +111,7 @@ const prev=globalThis.__colorizeBeforeThreeRender;
 globalThis.__colorizeBeforeThreeRender=(r,s,c)=>{prev?.(r,s,c);apply(r,s,c)};
 globalThis.__colorizeAssembly15Debug=()=>structuredClone(debug);
 globalThis.__colorizeAssembly15Redraw=()=>{if(lastRenderer&&lastScene&&lastCamera)lastRenderer.render(lastScene,lastCamera)};
-window.addEventListener('DOMContentLoaded',()=>{document.addEventListener('input',e=>{if(e.target.closest?.('#constructionPanel'))requestAnimationFrame(()=>globalThis.__colorizeAssembly15Redraw?.())},true);document.addEventListener('change',e=>{if(e.target.closest?.('#constructionPanel'))requestAnimationFrame(()=>globalThis.__colorizeAssembly15Redraw?.())},true)});
+window.addEventListener('DOMContentLoaded',()=>{
+  const redraw=e=>{if(e.target.closest?.('#constructionPanel'))requestAnimationFrame(()=>globalThis.__colorizeAssembly15Redraw?.())};
+  document.addEventListener('input',redraw,true);document.addEventListener('change',redraw,true);
+});
