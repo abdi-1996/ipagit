@@ -1,7 +1,7 @@
 body.infinite-v017{--v17-paper:#fff;--v17-grid:#e8eaed;--v17-ruler:#f4f4f4;--v17-ruler-line:#c6c9ce}
 .infinite-v017 .viewport{background:var(--v17-paper)!important}
-.infinite-v017 .viewport-grid{background-color:var(--v17-paper)!important;background-image:linear-gradient(var(--v17-grid) 1px,transparent 1px),linear-gradient(90deg,var(--v17-grid) 1px,transparent 1px)!important;opacity:.72}
-.infinite-v017 .viewport.aff-grid-off16 .viewport-grid{background-image:none!important}
+.infinite-v017 .viewport-grid{display:none!important;background-color:var(--v17-paper)!important;background-image:none!important;opacity:0!important}
+.infinite-v017 #affGrid16{display:none!important}
 .infinite-v017 .artboard{background:transparent!important;box-shadow:none!important;outline:none!important;border:0!important}
 .infinite-v017 .artboard.active{outline:none!important;box-shadow:none!important}
 .infinite-v017 .artboard-title{display:none!important}
