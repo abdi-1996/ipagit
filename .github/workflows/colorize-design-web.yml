@@ -29,12 +29,14 @@ jobs:
           test -s ColorizeDesignWeb/styles.css
           test -s ColorizeDesignWeb/three-colorize.js
           test -s ColorizeDesignWeb/boot-v017.js
+          test -s ColorizeDesignWeb/boot-v018.js
           test -s ColorizeDesignWeb/v0135-lighting-engine.js
           test -s ColorizeDesignWeb/v0135-lighting-ui-bridge.js
           test -s ColorizeDesignWeb/v014-assembled-signs.js
           test -s ColorizeDesignWeb/v015-true-assembly.js
           test -s ColorizeDesignWeb/v016-affinity-workspace.js
           test -s ColorizeDesignWeb/v017-infinite-workspace.js
+          test -s ColorizeDesignWeb/v018-geometry-quality.js
           test -s ColorizeDesignWeb/v016.css
           test -s ColorizeDesignWeb/v017.css
           test -s ColorizeDesignWeb/v014-overlay-guard.js
@@ -58,6 +60,8 @@ jobs:
           node --input-type=module --check < ColorizeDesignWeb/v015-true-assembly.js
           node --input-type=module --check < ColorizeDesignWeb/v016-affinity-workspace.js
           node --input-type=module --check < ColorizeDesignWeb/v017-infinite-workspace.js
+          node --input-type=module --check < ColorizeDesignWeb/v018-geometry-quality.js
+          node --input-type=module --check < ColorizeDesignWeb/boot-v018.js
           node --input-type=module --check < ColorizeDesignWeb/facade.js
 
       - name: Test lighting in a real browser
@@ -84,13 +88,13 @@ jobs:
       - name: Package browser build
         run: |
           cd ColorizeDesignWeb
-          zip -qr ../ColorizeDesignWeb-v0.17.1.zip .
+          zip -qr ../ColorizeDesignWeb-v0.18.0.zip .
 
       - name: Upload downloadable build
         uses: actions/upload-artifact@v4
         with:
-          name: ColorizeDesignWeb-v0.17.1
-          path: ColorizeDesignWeb-v0.17.1.zip
+          name: ColorizeDesignWeb-v0.18.0
+          path: ColorizeDesignWeb-v0.18.0.zip
           retention-days: 30
 
       - name: Configure Pages
