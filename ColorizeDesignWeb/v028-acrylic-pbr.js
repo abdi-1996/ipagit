@@ -31,10 +31,14 @@ function readProject(){for(const k of PROJECT_KEYS){try{const raw=localStorage.g
 function readReflection(){try{const s=JSON.parse(localStorage.getItem(HDR_KEY)||'{}');return clamp(s.reflectionIntensity??1,0,2)}catch{return 1}}
 function textMap(project){const m=new Map();for(const a of project?.artboards||[])for(const o of a.objects||[])if(o?.type==='text')m.set(o.id,o);return m}
 function kindFor(obj,part){if(part==='face')return obj.faceMaterial;if(part==='returns')return obj.returnMaterial;if(part==='back')return obj.backMaterial;return null}
-function profileFor(kind){if(!kind)return null;const k=String(kind).toLowerCase();return PROFILES[k]||null}
+function profileFor(kind){if(!kind)return null;return PROFILES[String(kind).toLowerCase()]||null}
 function applyMaterial(m,p,kind,part,globalReflection){
   if(!m||!p)return false;
-  m.opacity=1;m.transparent=false;m.depthWrite=true;m.metalness=p.metalness;m.roughness=p.roughness;
+  m.opacity=1;
+  m.transparent=false;
+  m.depthWrite=true;
+  m.metalness=p.metalness;
+  m.roughness=p.roughness;
   if('clearcoat' in m)m.clearcoat=p.clearcoat;
   if('clearcoatRoughness' in m)m.clearcoatRoughness=p.clearcoatRoughness;
   if('ior' in m)m.ior=1.49;
@@ -43,7 +47,10 @@ function applyMaterial(m,p,kind,part,globalReflection){
   if('thickness' in m)m.thickness=p.transmission>0?(p.thickness||.4):0;
   if('attenuationDistance' in m&&p.transmission<=0)m.attenuationDistance=Infinity;
   if('envMapIntensity' in m)m.envMapIntensity=clamp(globalReflection*p.env,0,1.35);
-  m.userData.colorizeAcrylic28=true;m.userData.colorizeAcrylic28Kind=kind;m.userData.colorizeAcrylic28Part=part;m.needsUpdate=true;
+  m.userData.colorizeAcrylic28=true;
+  m.userData.colorizeAcrylic28Kind=kind;
+  m.userData.colorizeAcrylic28Part=part;
+  m.needsUpdate=true;
   return true;
 }
 function tune(scene){
@@ -53,10 +60,14 @@ function tune(scene){
     if(!group.userData?.colorizeSeparateParts19)return;
     const obj=byId.get(group.userData.objectId);if(!obj)return;
     for(const child of group.children||[]){
-      if(!child.isMesh)return;
-      const part=child.userData?.part19,kind=kindFor(obj,part),p=profileFor(kind);if(!p)return;
+      if(!child.isMesh)continue;
+      const part=child.userData?.part19,kind=kindFor(obj,part),p=profileFor(kind);if(!p)continue;
       const mats=(Array.isArray(child.material)?child.material:[child.material]).filter(Boolean);
-      for(const m of mats){if(applyMaterial(m,p,kind,part,globalReflection)){applied++;if(p.transparentPreset)transparent++;else opaque++;if(samples.length<12)samples.push({kind,part,opacity:m.opacity,transparent:m.transparent,transmission:Number(m.transmission||0),roughness:Number(m.roughness||0),metalness:Number(m.metalness||0),envMapIntensity:Number(m.envMapIntensity||0),specularIntensity:Number(m.specularIntensity??1)})}}
+      for(const m of mats){
+        if(!applyMaterial(m,p,kind,part,globalReflection))continue;
+        applied++;if(p.transparentPreset)transparent++;else opaque++;
+        if(samples.length<12)samples.push({kind,part,opacity:m.opacity,transparent:m.transparent,transmission:Number(m.transmission||0),roughness:Number(m.roughness||0),metalness:Number(m.metalness||0),envMapIntensity:Number(m.envMapIntensity||0),specularIntensity:Number(m.specularIntensity??1)});
+      }
     }
   });
   debug={version:VERSION,applied,opaque,transparent,lastReflection:globalReflection,samples};
@@ -68,10 +79,11 @@ globalThis.__colorizeBeforeThreeRender=(renderer,scene,camera)=>{previous?.(rend
 function normalizeReflectionUI(){
   const input=document.getElementById('hdriReflect27');if(!input)return;
   input.max='2';input.step='0.05';
-  const row=input.closest('.hdri27-row');const label=row?.querySelector('span');if(label)label.textContent='Отражения PBR';
+  const row=input.closest('.hdri27-row'),label=row?.querySelector('span');if(label)label.textContent='Отражения PBR';
   const current=Number(input.value)||1;
   if(current>2){input.value='1';input.dispatchEvent(new Event('input',{bubbles:true}))}
-  const note=document.querySelector('#hdriUnified27 .hdri27-note');if(note&&!note.dataset.pbr28){note.dataset.pbr28='1';note.textContent='Один HDRI освещает сцену и даёт физически корректные отражения. Обычный акрил непрозрачный; прозрачность есть только у специальных прозрачных пресетов.'}
+  const note=document.querySelector('#hdriUnified27 .hdri27-note');
+  if(note&&!note.dataset.pbr28){note.dataset.pbr28='1';note.textContent='Один HDRI освещает сцену и даёт физически корректные отражения. Обычный акрил непрозрачный; прозрачность есть только у специальных прозрачных пресетов.'}
 }
 function installUI(){normalizeReflectionUI();new MutationObserver(normalizeReflectionUI).observe(document.body,{childList:true,subtree:true})}
 if(document.readyState==='loading')window.addEventListener('DOMContentLoaded',installUI,{once:true});else installUI();
