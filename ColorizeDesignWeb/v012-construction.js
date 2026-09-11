@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { toCreasedNormals } from 'three/addons/utils/BufferGeometryUtils.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { FontLoader } from 'three/addons/loaders/FontLoader.js';
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
@@ -95,7 +96,7 @@ function rebuildPreview(){
   if(!scene||!font)return;clearRoot();const litFace=cfg.lightMode==='face'||cfg.lightMode==='both';
   const wall=new THREE.Mesh(new THREE.PlaneGeometry(7,5),new THREE.MeshPhysicalMaterial({color:0xe8e6e1,roughness:.92}));wall.position.set(0,.6,-.18);wall.receiveShadow=true;root.add(wall);
   if(cfg.constructionType==='letter'){
-    const depth=cfg.volume?Math.max(.06,cfg.returnDepth/65):Math.max(.035,cfg.faceThickness/90);const g=new TextGeometry('A',{font,size:3,depth,curveSegments:10,bevelEnabled:true,bevelThickness:.035,bevelSize:.025,bevelSegments:4});g.computeBoundingBox();g.center();
+    const depth=cfg.volume?Math.max(.06,cfg.returnDepth/65):Math.max(.035,cfg.faceThickness/90);const g=new TextGeometry('A',{font,size:3,depth,curveSegments:48,bevelEnabled:true,bevelThickness:.035,bevelSize:.025,bevelSegments:6});toCreasedNormals(g, Math.PI / 6);g.computeBoundingBox();g.center();
     const face=material(cfg.faceMaterial,cfg.faceColor,litFace),side=material(sideKind(cfg.returnMaterial),cfg.sideColor,false);const m=new THREE.Mesh(g,[face,side]);m.castShadow=true;m.receiveShadow=true;m.position.z=.08+depth/2+cfg.wallGap/90;root.add(m);
     if(cfg.backType!=='none')addBacking(3.25,3.55);
   }else{

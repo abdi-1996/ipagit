@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { toCreasedNormals } from 'three/addons/utils/BufferGeometryUtils.js';
 
 const PROJECT_KEYS=['colorize-design-web-v04','colorize-design-web-v03','colorize-design-web-v02','colorize-design-web-v01'];
 const ASSEMBLY_KEY='colorize-assembled-v014';
@@ -70,12 +71,17 @@ function build(mesh,o,cfg){
   const frontBase=triGeometry(mesh.geometry,(cz,nz)=>cz>front-b.depth*.10&&nz>.82);
   const backBase=triGeometry(mesh.geometry,(cz,nz)=>cz<back+b.depth*.10&&nz<-.82);
   const sideBase=triGeometry(mesh.geometry,(cz,nz)=>!(cz>front-b.depth*.10&&nz>.82)&&!(cz<back+b.depth*.10&&nz<-.82));
+  // ExtrudeGeometry duplicates triangle vertices. Average only neighbouring
+  // normals within 30 degrees: smooth curved returns, retain actual corners.
+  toCreasedNormals(sideBase, Math.PI / 6);
   const flat=cfg.assemblyType==='flatAcrylic'||cfg.assemblyType==='flatPvc';
   const faceKind=cfg.assemblyType==='halo'?(o.faceMaterial==='acrylic'?'metal':o.faceMaterial):(cfg.assemblyType==='flatPvc'?'pvc':(o.faceMaterial||'acrylic'));
   const sideKind=o.returnMaterial||'pvc',backKind=o.backMaterial||'pvc';
 
   const returnMesh=meshPart(g,'return',sideBase,materialFor(sideKind,o.sideColor,cfg.returnFinish,cfg.acrylicLook,o));returnMesh.visible=!flat;
   const faceEdgeGeo=triGeometry(sideBase,()=>true,z=>front+((z-back)/b.depth)*faceT);
+  // Z compression changes the surface slope; recompute before smoothing.
+  toCreasedNormals(faceEdgeGeo, Math.PI / 6);
   const faceEdge=meshPart(g,'faceEdge',faceEdgeGeo,materialFor(faceKind,o.faceColor,cfg.returnFinish,cfg.acrylicLook,o));
   const face=meshPart(g,'face',frontBase,materialFor(faceKind,o.faceColor,cfg.returnFinish,cfg.acrylicLook,o));face.position.z=faceT+eps;face.renderOrder=3;
   faceEdge.visible=cfg.assemblyType!=='halo'||faceKind!=='metal';

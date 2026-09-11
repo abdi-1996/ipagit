@@ -42,6 +42,18 @@ try:
                 raise
     ready=evaluate("""(async()=>{const w=t=>new Promise(r=>setTimeout(r,t));for(let i=0;i<200;i++){if(document.readyState==='complete'&&document.querySelector('.mode[data-mode="view3d"]')&&typeof window.__colorizeAssembly15Debug==='function')break;await w(100)}document.querySelector('.mode[data-mode="view3d"]')?.click();for(let i=0;i<260;i++){const d=window.__colorizeAssembly15Debug?.();const c=document.querySelector('#threeHost canvas');if(d?.objects>0&&c&&c.width>100&&document.getElementById('threeLoading')?.hidden){await w(600);return d}await w(100)}return null})()""",True)
     if not ready: raise RuntimeError('v0.15 assembly did not become ready')
+    smooth=evaluate("""(()=>{let result=null;const prev=globalThis.__colorizeBeforeThreeRender;
+      globalThis.__colorizeBeforeThreeRender=(r,s,c)=>{prev?.(r,s,c);let segments=0,varying=0,finite=true;
+        s.traverse(m=>{if(m.geometry?.type==='TextGeometry')segments=Math.max(segments,m.geometry.parameters?.options?.curveSegments||0);
+          if(m.userData?.part15==='return'){const n=m.geometry.getAttribute('normal');for(let i=0;i<n.count;i+=3){
+            const dx=n.getX(i)-n.getX(i+1),dy=n.getY(i)-n.getY(i+1),dz=n.getZ(i)-n.getZ(i+1);
+            if(dx*dx+dy*dy+dz*dz>1e-8)varying++;
+            for(let j=0;j<3;j++)finite=finite&&Number.isFinite(n.getX(i+j))&&Number.isFinite(n.getY(i+j))&&Number.isFinite(n.getZ(i+j));
+          }}});result={segments,varying,finite};};
+      try{globalThis.__colorizeAssembly15Redraw();return result;}finally{globalThis.__colorizeBeforeThreeRender=prev;}})()""")
+    print('SMOOTH CURVES',json.dumps(smooth))
+    if not smooth or smooth['segments']<48 or smooth['varying']<10 or not smooth['finite']:
+        raise RuntimeError('Rounded returns lack dense curves or interpolated smooth normals')
     d=ready;last=d.get('lastObject') or {}
     print('V015 DEBUG',json.dumps(d,ensure_ascii=False))
     if d.get('version')!='0.15.0': raise RuntimeError('Wrong assembly engine version')

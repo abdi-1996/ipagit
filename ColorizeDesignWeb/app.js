@@ -272,7 +272,7 @@ class Real3DScene{
       if(token!==this.rebuildToken)return;
       const depthU=clamp(Number(o.returnDepth)||50,5,300)/45;
       const bevelU=clamp(Number(o.faceThickness)||3,1,30)/130;
-      const geo=new TextGeometry(o.text||' ',{font,size:1,depth:depthU,curveSegments:8,bevelEnabled:true,bevelThickness:bevelU,bevelSize:bevelU*.72,bevelSegments:rendered?4:2});
+      const geo=new TextGeometry(o.text||' ',{font,size:1,depth:depthU,curveSegments:48,bevelEnabled:true,bevelThickness:bevelU,bevelSize:bevelU*.72,bevelSegments:6});
       geo.computeBoundingBox();const bb=geo.boundingBox;if(!bb)continue;
       const rawW=Math.max(.001,bb.max.x-bb.min.x),rawH=Math.max(.001,bb.max.y-bb.min.y);
       geo.center();

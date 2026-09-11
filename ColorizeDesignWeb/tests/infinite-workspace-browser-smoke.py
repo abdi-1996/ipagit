@@ -43,7 +43,7 @@ try:
     if not ready: raise RuntimeError('v0.17 infinite workspace did not become ready')
     ui=evaluate("""(()=>{const v=document.getElementById('viewport'),a=document.querySelector('.artboard.active'),t=document.querySelector('.artboard-title'),tab=document.querySelector('.panel-tab[data-panel="artboards"]'),d=window.__colorizeInfinite17.debug();return{debug:d,viewport:getComputedStyle(v).backgroundColor,artboard:getComputedStyle(a).backgroundColor,shadow:getComputedStyle(a).boxShadow,outline:getComputedStyle(a).outlineStyle,title:t?getComputedStyle(t).display:null,artboards:tab?getComputedStyle(tab).display:null,ruler:!!document.getElementById('v17RulerTop'),measure:!!document.getElementById('v17MeasureSection')}})()""")
     print('V017 UI',json.dumps(ui,ensure_ascii=False))
-    if ui['debug'].get('version')!='0.17.0' or ui['debug'].get('unit')!='cm' or not ui['debug'].get('infinite'): raise RuntimeError('Wrong v0.17 workspace state')
+    if ui['debug'].get('version')!='0.17.1' or ui['debug'].get('unit')!='cm' or not ui['debug'].get('infinite'): raise RuntimeError('Wrong v0.17 workspace state')
     if ui['viewport'] not in ('rgb(255, 255, 255)','rgba(255, 255, 255, 1)'): raise RuntimeError('Workspace is not solid white')
     if ui['artboard'] not in ('rgba(0, 0, 0, 0)','transparent'): raise RuntimeError('Visible Artboard background still exists')
     if ui['shadow']!='none' or ui['outline']!='none' or ui['title']!='none' or ui['artboards']!='none': raise RuntimeError('Artboard/page chrome is still visible')

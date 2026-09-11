@@ -158,11 +158,11 @@ function bind(){
   setInterval(()=>refreshAll(false),450);
 }
 function install(){
-  document.body.classList.add('infinite-v017');const ver=$('.brand span');if(ver)ver.textContent='Web v0.17.0';installContext();installRulers();cleanArtboardUI();bind();setTimeout(()=>refreshAll(true),100);setTimeout(()=>refreshAll(true),650)
+  document.body.classList.add('infinite-v017');const ver=$('.brand span');if(ver)ver.textContent='Web v0.17.1';installContext();installRulers();cleanArtboardUI();bind();setTimeout(()=>refreshAll(true),100);setTimeout(()=>refreshAll(true),650)
 }
 
 window.__colorizeInfinite17={
-  debug:()=>{const m=domMetrics(),{o}=selectedData();return {version:'0.17.0',unit:'cm',unitsPerCm:UNIT,infinite:true,white:getComputedStyle($('#viewport')).backgroundColor,selectedType:o?.type||null,metrics:m?{xCm:m.xCm,yCm:m.yCm,wCm:m.wCm,hCm:m.hCm}:null,textAuto:o?.type==='text'}},
+  debug:()=>{const m=domMetrics(),{o}=selectedData();return {version:'0.17.1',unit:'cm',unitsPerCm:UNIT,infinite:true,white:getComputedStyle($('#viewport')).backgroundColor,selectedType:o?.type||null,metrics:m?{xCm:m.xCm,yCm:m.yCm,wCm:m.wCm,hCm:m.hCm}:null,textAuto:o?.type==='text'}},
   setCm:setCmProp,setText:setTextValue,autoText:()=>autoSizeSelectedText(true),refresh:()=>refreshAll(true)
 };
 
