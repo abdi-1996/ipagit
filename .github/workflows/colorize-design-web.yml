@@ -33,6 +33,7 @@ jobs:
           test -s ColorizeDesignWeb/boot-v019.js
           test -s ColorizeDesignWeb/boot-v020.js
           test -s ColorizeDesignWeb/boot-v021.js
+          test -s ColorizeDesignWeb/boot-v022.js
           test -s ColorizeDesignWeb/v0135-lighting-engine.js
           test -s ColorizeDesignWeb/v0135-lighting-ui-bridge.js
           test -s ColorizeDesignWeb/v014-assembled-signs.js
@@ -44,6 +45,7 @@ jobs:
           test -s ColorizeDesignWeb/v019-parts-ui.js
           test -s ColorizeDesignWeb/v020-acrylic-materials.js
           test -s ColorizeDesignWeb/v021-clean-3d-scene.js
+          test -s ColorizeDesignWeb/v022-history-gestures.js
           test -s ColorizeDesignWeb/v016.css
           test -s ColorizeDesignWeb/v017.css
           test -s ColorizeDesignWeb/v014-overlay-guard.js
@@ -57,6 +59,7 @@ jobs:
           test -s ColorizeDesignWeb/tests/cap-normal-browser-smoke.py
           test -s ColorizeDesignWeb/tests/acrylic-materials-browser-smoke.py
           test -s ColorizeDesignWeb/tests/clean-3d-scene-browser-smoke.py
+          test -s ColorizeDesignWeb/tests/history-undo-redo-browser-smoke.py
           node --input-type=module --check < ColorizeDesignWeb/three-colorize.js
           node --input-type=module --check < ColorizeDesignWeb/app.js
           node --input-type=module --check < ColorizeDesignWeb/v011-realtime-3d.js
@@ -76,15 +79,18 @@ jobs:
           node --input-type=module --check < ColorizeDesignWeb/v019-parts-ui.js
           node --input-type=module --check < ColorizeDesignWeb/v020-acrylic-materials.js
           node --input-type=module --check < ColorizeDesignWeb/v021-clean-3d-scene.js
+          node --input-type=module --check < ColorizeDesignWeb/v022-history-gestures.js
           node --input-type=module --check < ColorizeDesignWeb/boot-v018.js
           node --input-type=module --check < ColorizeDesignWeb/boot-v019.js
           node --input-type=module --check < ColorizeDesignWeb/boot-v020.js
           node --input-type=module --check < ColorizeDesignWeb/boot-v021.js
+          node --input-type=module --check < ColorizeDesignWeb/boot-v022.js
           node --input-type=module --check < ColorizeDesignWeb/facade.js
           python -m py_compile ColorizeDesignWeb/tests/separate-parts-browser-smoke.py
           python -m py_compile ColorizeDesignWeb/tests/cap-normal-browser-smoke.py
           python -m py_compile ColorizeDesignWeb/tests/acrylic-materials-browser-smoke.py
           python -m py_compile ColorizeDesignWeb/tests/clean-3d-scene-browser-smoke.py
+          python -m py_compile ColorizeDesignWeb/tests/history-undo-redo-browser-smoke.py
 
       - name: Test lighting in a real browser
         run: |
@@ -115,6 +121,10 @@ jobs:
         run: |
           python ColorizeDesignWeb/tests/clean-3d-scene-browser-smoke.py
 
+      - name: Test Undo Redo keyboard and touch gestures
+        run: |
+          python ColorizeDesignWeb/tests/history-undo-redo-browser-smoke.py
+
       - name: Test Affinity-inspired 2D workspace in a real browser
         run: |
           python ColorizeDesignWeb/tests/affinity-workspace-browser-smoke.py
@@ -126,13 +136,13 @@ jobs:
       - name: Package browser build
         run: |
           cd ColorizeDesignWeb
-          zip -qr ../ColorizeDesignWeb-v0.21.0.zip .
+          zip -qr ../ColorizeDesignWeb-v0.22.0.zip .
 
       - name: Upload downloadable build
         uses: actions/upload-artifact@v4
         with:
-          name: ColorizeDesignWeb-v0.21.0
-          path: ColorizeDesignWeb-v0.21.0.zip
+          name: ColorizeDesignWeb-v0.22.0
+          path: ColorizeDesignWeb-v0.22.0.zip
           retention-days: 30
 
       - name: Configure Pages
