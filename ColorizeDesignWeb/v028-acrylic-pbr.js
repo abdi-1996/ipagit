@@ -78,14 +78,24 @@ globalThis.__colorizeBeforeThreeRender=(renderer,scene,camera)=>{previous?.(rend
 
 function normalizeReflectionUI(){
   const input=document.getElementById('hdriReflect27');if(!input)return;
-  input.max='2';input.step='0.05';
-  const row=input.closest('.hdri27-row'),label=row?.querySelector('span');if(label)label.textContent='Отражения PBR';
+  if(input.max!=='2')input.max='2';
+  if(input.step!=='0.05')input.step='0.05';
+  const row=input.closest('.hdri27-row'),label=row?.querySelector('span');
+  if(label&&label.textContent!=='Отражения PBR')label.textContent='Отражения PBR';
   const current=Number(input.value)||1;
   if(current>2){input.value='1';input.dispatchEvent(new Event('input',{bubbles:true}))}
   const note=document.querySelector('#hdriUnified27 .hdri27-note');
   if(note&&!note.dataset.pbr28){note.dataset.pbr28='1';note.textContent='Один HDRI освещает сцену и даёт физически корректные отражения. Обычный акрил непрозрачный; прозрачность есть только у специальных прозрачных пресетов.'}
 }
-function installUI(){normalizeReflectionUI();new MutationObserver(normalizeReflectionUI).observe(document.body,{childList:true,subtree:true})}
+let uiQueued=false;
+function queueNormalize(){
+  if(uiQueued)return;uiQueued=true;
+  requestAnimationFrame(()=>{uiQueued=false;normalizeReflectionUI()});
+}
+function installUI(){
+  normalizeReflectionUI();
+  new MutationObserver(queueNormalize).observe(document.body,{childList:true,subtree:true});
+}
 if(document.readyState==='loading')window.addEventListener('DOMContentLoaded',installUI,{once:true});else installUI();
 
 globalThis.__colorizeAcrylic28Debug=()=>({...debug});
