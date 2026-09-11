@@ -21,7 +21,7 @@ try:
     url=f'http://127.0.0.1:{PORT}/?v022-history-smoke=1'
     req=urllib.request.Request(f'http://127.0.0.1:{DEBUG_PORT}/json/new?{urllib.parse.quote(url,safe=":/?=&")}',method='PUT')
     with urllib.request.urlopen(req,timeout=5) as r: page=json.load(r)
-    ws=websocket.create_connection(page['webSocketDebuggerUrl'],timeout=30);cid=0
+    ws=websocket.create_connection(page['webSocketDebuggerUrl'],timeout=40);cid=0
     def call(method,params=None):
         global cid;cid+=1;my=cid;ws.send(json.dumps({'id':my,'method':method,'params':params or {}}))
         while True:
@@ -34,7 +34,7 @@ try:
         r=call('Runtime.evaluate',{'expression':expr,'returnByValue':True,'awaitPromise':await_promise})
         if r.get('exceptionDetails'): raise RuntimeError('JS exception '+json.dumps(r['exceptionDetails']))
         return r.get('result',{}).get('value')
-    ready=evaluate("""(async()=>{const w=t=>new Promise(r=>setTimeout(r,t));for(let i=0;i<180;i++){const d=window.__colorizeHistory22Debug?.();const input=document.querySelector('[data-prop="text"]');if(d?.version==='0.22.0'&&input){await w(700);return window.__colorizeHistory22Debug?.()}await w(100)}return null})()""",True)
+    ready=evaluate("""(async()=>{const w=t=>new Promise(r=>setTimeout(r,t));for(let i=0;i<220;i++){const d=window.__colorizeHistory22Debug?.();const input=document.querySelector('[data-prop="text"]');if(d?.version==='0.22.0'&&input){for(let j=0;j<60;j++){const x=window.__colorizeHistory22Debug?.();if(x&&!x.pending)return x;await w(100)}return window.__colorizeHistory22Debug?.()}await w(100)}return null})()""",True)
     if not ready: raise RuntimeError('v0.22 history module did not become ready')
     result=evaluate("""(async()=>{
       const w=t=>new Promise(r=>setTimeout(r,t));
@@ -42,19 +42,22 @@ try:
       const key='colorize-design-web-v04';
       const input=document.querySelector('[data-prop="text"]');
       const before=localStorage.getItem(key);const beforeDebug=window.__colorizeHistory22Debug();
-      input.value='UNDO REDO TEST';input.dispatchEvent(new Event('input',{bubbles:true}));await w(450);
-      const changed=localStorage.getItem(key);const afterEdit=window.__colorizeHistory22Debug();
-      document.dispatchEvent(new KeyboardEvent('keydown',{key:'z',ctrlKey:true,bubbles:true,cancelable:true}));await w(80);
+      input.value='UNDO REDO TEST';input.dispatchEvent(new Event('input',{bubbles:true}));
+      let changed=null;
+      for(let i=0;i<80;i++){changed=localStorage.getItem(key);const d=window.__colorizeHistory22Debug?.();if(changed!==before&&d&&!d.pending)break;await w(100)}
+      const afterEdit=window.__colorizeHistory22Debug();
+      document.dispatchEvent(new KeyboardEvent('keydown',{key:'z',ctrlKey:true,bubbles:true,cancelable:true}));await w(120);
       const undone=localStorage.getItem(key);const afterUndo=window.__colorizeHistory22Debug();
-      document.dispatchEvent(new KeyboardEvent('keydown',{key:'y',ctrlKey:true,bubbles:true,cancelable:true}));await w(80);
+      document.dispatchEvent(new KeyboardEvent('keydown',{key:'y',ctrlKey:true,bubbles:true,cancelable:true}));await w(120);
       const redone=localStorage.getItem(key);const afterRedo=window.__colorizeHistory22Debug();
-      window.__colorizeHistory22SimulateGesture(2);await w(50);const gestureUndo=localStorage.getItem(key);const afterGestureUndo=window.__colorizeHistory22Debug();
-      window.__colorizeHistory22SimulateGesture(3);await w(50);const gestureRedo=localStorage.getItem(key);const afterGestureRedo=window.__colorizeHistory22Debug();
+      window.__colorizeHistory22SimulateGesture(2);await w(90);const gestureUndo=localStorage.getItem(key);const afterGestureUndo=window.__colorizeHistory22Debug();
+      window.__colorizeHistory22SimulateGesture(3);await w(90);const gestureRedo=localStorage.getItem(key);const afterGestureRedo=window.__colorizeHistory22Debug();
       const textOf=raw=>{try{const p=JSON.parse(raw);const a=p.artboards?.find(x=>x.id===p.activeArtboardId)||p.artboards?.[0];return a?.objects?.find(o=>o.id===p.selectedObjectId)?.text||null}catch{return null}};
       return {beforeText:textOf(before),changedText:textOf(changed),undoneText:textOf(undone),redoneText:textOf(redone),gestureUndoText:textOf(gestureUndo),gestureRedoText:textOf(gestureRedo),before,changed,undone,redone,gestureUndo,gestureRedo,beforeDebug,afterEdit,afterUndo,afterRedo,afterGestureUndo,afterGestureRedo};
     })()""",True)
     print('V022 HISTORY DIAG',json.dumps({k:result[k] for k in ('beforeText','changedText','undoneText','redoneText','gestureUndoText','gestureRedoText','beforeDebug','afterEdit','afterUndo','afterRedo','afterGestureUndo','afterGestureRedo')},ensure_ascii=False),flush=True)
-    if not result or result['before']==result['changed']: raise RuntimeError('Editing did not create a new project snapshot')
+    if not result or result['before']==result['changed']: raise RuntimeError('Editing did not create a committed project snapshot')
+    if result['afterEdit'].get('pending'): raise RuntimeError('Edit snapshot was still pending before undo')
     if result['undone']!=result['before']: raise RuntimeError('Ctrl+Z did not restore previous project snapshot')
     if result['redone']!=result['changed']: raise RuntimeError('Ctrl+Y did not restore redone project snapshot')
     if result['gestureUndo']!=result['before']: raise RuntimeError('Two-finger double-tap logic did not undo')
