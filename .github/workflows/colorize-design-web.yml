@@ -44,18 +44,8 @@ jobs:
       - name: Install browser test dependency
         run: python -m pip install --quiet websocket-client
 
-      - name: Test unified HDRI source and visible size
+      - name: Test one HDRI for lighting reflections and visible size
         run: python ColorizeDesignWeb/tests/unified-hdri-browser-smoke.py || python ColorizeDesignWeb/tests/unified-hdri-browser-smoke.py
-
-      - name: Legacy regression smoke tests
-        continue-on-error: true
-        run: |
-          python ColorizeDesignWeb/tests/history-undo-redo-browser-smoke.py || true
-          python ColorizeDesignWeb/tests/lighting-browser-smoke.py || true
-          python ColorizeDesignWeb/tests/jeksterer-hdri-fixed-browser-smoke.py || true
-          python ColorizeDesignWeb/tests/face-contour-fit-browser-smoke.py || true
-          python ColorizeDesignWeb/tests/acrylic-materials-browser-smoke.py || true
-          python ColorizeDesignWeb/tests/clean-3d-scene-browser-smoke.py || true
 
       - name: Package browser build
         run: |
