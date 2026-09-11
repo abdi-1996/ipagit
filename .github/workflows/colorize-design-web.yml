@@ -23,7 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Validate v0.28 web app
+      - name: Validate v0.28.1 web app
         run: |
           test -s ColorizeDesignWeb/index.html
           test -s ColorizeDesignWeb/styles.css
@@ -54,13 +54,13 @@ jobs:
       - name: Package browser build
         run: |
           cd ColorizeDesignWeb
-          zip -qr ../ColorizeDesignWeb-v0.28.0.zip .
+          zip -qr ../ColorizeDesignWeb-v0.28.1.zip .
 
       - name: Upload downloadable build
         uses: actions/upload-artifact@v4
         with:
-          name: ColorizeDesignWeb-v0.28.0
-          path: ColorizeDesignWeb-v0.28.0.zip
+          name: ColorizeDesignWeb-v0.28.1
+          path: ColorizeDesignWeb-v0.28.1.zip
           retention-days: 30
 
       - name: Configure Pages
