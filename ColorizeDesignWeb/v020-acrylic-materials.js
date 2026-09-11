@@ -115,21 +115,28 @@ function injectOptions(){
   const project=readProject(),obj=selectedText(project);
   for(const key of ['faceMaterial','returnMaterial','backMaterial']){
     const select=document.querySelector(`select[data-prop="${key}"]`);if(!select)continue;
-    select.querySelector('optgroup[data-acrylic20]')?.remove();
-    const group=document.createElement('optgroup');group.label='Акрил — специальные';group.dataset.acrylic20='1';
-    for(const [value,p] of Object.entries(ACRYLICS)){
-      const option=document.createElement('option');option.value=value;option.textContent=p.label.replace('Акрил — ','');group.appendChild(option);
+    let group=select.querySelector('optgroup[data-acrylic20]');
+    if(!group){
+      group=document.createElement('optgroup');group.label='Акрил — специальные';group.dataset.acrylic20='1';
+      for(const [value,p] of Object.entries(ACRYLICS)){
+        const option=document.createElement('option');option.value=value;option.textContent=p.label.replace('Акрил — ','');group.appendChild(option);
+      }
+      const acrylicOption=[...select.options].find(o=>o.value==='acrylic');
+      if(acrylicOption)acrylicOption.textContent='Акрил — стандартный';
+      select.appendChild(group);
     }
-    const acrylicOption=[...select.options].find(o=>o.value==='acrylic');
-    if(acrylicOption)acrylicOption.textContent='Акрил — стандартный';
-    select.appendChild(group);
-    if(obj&&obj[key]&&[...select.options].some(o=>o.value===obj[key]))select.value=obj[key];
+    if(obj&&obj[key]&&select.value!==obj[key]&&[...select.options].some(o=>o.value===obj[key]))select.value=obj[key];
   }
+}
+let uiQueued=false;
+function queueInject(){
+  if(uiQueued)return;uiQueued=true;
+  requestAnimationFrame(()=>{uiQueued=false;injectOptions()});
 }
 function installUI(){
   injectOptions();
   const root=document.getElementById('properties')||document.body;
-  new MutationObserver(()=>queueMicrotask(injectOptions)).observe(root,{childList:true,subtree:true});
+  new MutationObserver(queueInject).observe(root,{childList:true,subtree:true});
 }
 if(document.readyState==='loading')window.addEventListener('DOMContentLoaded',installUI,{once:true});else installUI();
 
