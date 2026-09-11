@@ -23,7 +23,6 @@ try:
     with urllib.request.urlopen(req,timeout=5) as r: page=json.load(r)
     ws=websocket.create_connection(page['webSocketDebuggerUrl'],timeout=20);cid=0
     def call(method,params=None):
-        nonlocal_cid=None
         global cid;cid+=1;my=cid
         ws.send(json.dumps({'id':my,'method':method,'params':params or {}}))
         while True:
@@ -36,13 +35,14 @@ try:
         if r.get('exceptionDetails'): raise RuntimeError('JS exception '+json.dumps(r['exceptionDetails']))
         return r.get('result',{}).get('value')
     call('Runtime.enable');call('Page.enable')
-    result=evaluate("""(async()=>{const w=t=>new Promise(r=>setTimeout(r,t));for(let i=0;i<120;i++){if(window.__colorizeInlineText29Debug?.().version==='0.29.0'&&document.querySelector('#world .obj.text.selected'))break;await w(100)}const before=window.__colorizeInlineText29Debug?.();const node=document.querySelector('#world .obj.text.selected');if(!node)return {error:'no selected text',before};window.__colorizeInlineText29Start();await w(50);const edit=document.querySelector('#world .obj.text.colorize-inline-editing29');if(!edit)return {error:'editor did not start',before};edit.textContent='ПРЯМО ВО VIEWPORT';window.__colorizeInlineText29Commit();await w(120);const raw=localStorage.getItem('colorize-design-web-v04');const p=raw?JSON.parse(raw):null;const a=p?.artboards?.find(x=>x.id===p.activeArtboardId)||p?.artboards?.[0];const o=a?.objects?.find(x=>x.id===p.selectedObjectId);const field=document.querySelector('#properties input[data-prop="text"]');return {before,after:window.__colorizeInlineText29Debug?.(),stored:o?.text,fieldHidden:!!field?.closest('.prop-row')?.hidden,visibleText:document.querySelector('#world .obj.text.selected')?.textContent||''}})()""",True)
+    result=evaluate("""(async()=>{const w=t=>new Promise(r=>setTimeout(r,t));for(let i=0;i<120;i++){if(window.__colorizeInlineText29Debug?.().version==='0.29.0'&&document.querySelector('#world .obj.text.selected'))break;await w(100)}const before=window.__colorizeInlineText29Debug?.();const node=document.querySelector('#world .obj.text.selected');if(!node)return {error:'no selected text',before};window.__colorizeInlineText29Start();await w(50);const edit=document.querySelector('#world .obj.text.colorize-inline-editing29');if(!edit)return {error:'editor did not start',before};const hadOnlyText=edit.childNodes.length===1&&edit.firstChild?.nodeType===Node.TEXT_NODE;edit.textContent='ПРЯМО ВО VIEWPORT';window.__colorizeInlineText29Commit();await w(120);const raw=localStorage.getItem('colorize-design-web-v04');const p=raw?JSON.parse(raw):null;const a=p?.artboards?.find(x=>x.id===p.activeArtboardId)||p?.artboards?.[0];const o=a?.objects?.find(x=>x.id===p.selectedObjectId);const field=document.querySelector('#properties input[data-prop="text"]');const rendered=document.querySelector('#world .obj.text.selected');return {before,after:window.__colorizeInlineText29Debug?.(),stored:o?.text,fieldHidden:!!field?.closest('.prop-row')?.hidden,renderedDataText:rendered?.dataset.text||'',hadOnlyText}})()""",True)
     print('V029 INLINE TEXT',json.dumps(result,ensure_ascii=False),flush=True)
     if result.get('error'): raise RuntimeError(result['error'])
     if (result.get('before') or {}).get('version')!='0.29.0': raise RuntimeError('v0.29 inline editor did not load')
     if result.get('stored')!='ПРЯМО ВО VIEWPORT': raise RuntimeError('edited text was not saved to project state')
     if not result.get('fieldHidden'): raise RuntimeError('legacy text field is still visible in properties')
-    if result.get('visibleText')!='ПРЯМО ВО VIEWPORT': raise RuntimeError('viewport did not render committed text')
+    if result.get('renderedDataText')!='ПРЯМО ВО VIEWPORT': raise RuntimeError('viewport did not render committed text')
+    if not result.get('hadOnlyText'): raise RuntimeError('selection handles leaked into editable text')
     print('inline-text-v029-browser-smoke: PASS — text edits directly in viewport and saves')
 finally:
     try:
