@@ -18,7 +18,7 @@ try:
             if version.get('webSocketDebuggerUrl'): break
         except Exception: time.sleep(.25)
     if not version: raise RuntimeError('Chrome DevTools endpoint not available')
-    url=f'http://127.0.0.1:{PORT}/?v020-acrylic-smoke=1'
+    url=f'http://127.0.0.1:{PORT}/?v019-smoke=1&v020-acrylic=1'
     req=urllib.request.Request(f'http://127.0.0.1:{DEBUG_PORT}/json/new?{urllib.parse.quote(url,safe=":/?=&")}',method='PUT')
     with urllib.request.urlopen(req,timeout=5) as r: page=json.load(r)
     ws=websocket.create_connection(page['webSocketDebuggerUrl'],timeout=30);cid=0
