@@ -4,7 +4,7 @@ import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
 
 // v0.25.1 — fixed built-in Jeksterer HDRI + reliable iOS/iPadOS import.
 const VERSION='0.25.1';
-const FIXED_ASSET='./assets/hdri/jeksterer23-64-fixed.b64';
+const FIXED_ASSET='./assets/hdri/JekstererHDRI_23.hdr';
 const LIGHT_KEY='colorize-lighting-v013';
 const V24_KEY='colorize-hdri-studio-v024';
 const SRC_KEY='colorize-hdri-source-v0251';
@@ -17,8 +17,7 @@ function writeJSON(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
 function light(){return readJSON(LIGHT_KEY,{mode:'main',hdr:{intensity:1.25,rotation:0,exposure:1.05}})}
 function studio(){return readJSON(V24_KEY,{tilt:0,background:false,backgroundIntensity:1,backgroundBlur:0,reflections:1})}
 function status(t){const el=document.getElementById('hdriSourceStatus25')||document.getElementById('hdriStatus24');if(el)el.textContent=t||''}
-function decode64(s){const raw=atob(String(s).replace(/\s+/g,'')),u=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)u[i]=raw.charCodeAt(i);return u.buffer}
-async function fixedBuffer(){const r=await fetch(FIXED_ASSET,{cache:'force-cache'});if(!r.ok)throw new Error(`HDRI asset ${r.status}`);const b=decode64(await r.text());debug.bytes=b.byteLength;return b}
+async function fixedBuffer(){const r=await fetch(FIXED_ASSET,{cache:'force-cache'});if(!r.ok)throw new Error(`HDRI asset ${r.status}`);const b=await r.arrayBuffer();debug.bytes=b.byteLength;return b}
 function dispose(){try{current?.target?.dispose?.();current?.texture?.dispose?.()}catch{}current=null;debug.loaded=false}
 async function parseBuffer(buffer,name){
   if(!renderer)throw new Error('3D renderer is not ready');
