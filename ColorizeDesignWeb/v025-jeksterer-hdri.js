@@ -14,7 +14,8 @@ const DB_STORE='files';
 const DB_KEY='custom';
 const BUILTIN_NAME='JekstererHDRI_23.hdr';
 const BUILTIN_PARTS=[
-  './assets/hdri/jeksterer23-128.part1.b64',
+  './assets/hdri/jeksterer23-128.part1a.b64',
+  './assets/hdri/jeksterer23-128.part1b.b64',
   './assets/hdri/jeksterer23-128.part2a.b64',
   './assets/hdri/jeksterer23-128.part2b.b64',
   './assets/hdri/jeksterer23-128.part3.b64'
