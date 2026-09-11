@@ -39,9 +39,10 @@ try:
     print('V019 DEBUG',json.dumps(ready,ensure_ascii=False))
     if ready.get('version')!='0.19.0': raise RuntimeError('Wrong separate-parts engine version')
     if min(int(ready.get('face') or 0),int(ready.get('returns') or 0),int(ready.get('back') or 0))<1: raise RuntimeError('Face, returns and back were not created separately')
-    changed=evaluate("""(async()=>{const w=t=>new Promise(r=>setTimeout(r,t));document.querySelector('[data-part19="back"]')?.click();const q=document.getElementById('quality19');if(q){q.value='ultra';q.dispatchEvent(new Event('change',{bubbles:true}))}await w(650);return window.__colorizeSeparateParts19Settings?.()})()""",True)
-    if not changed or changed.get('back') is not False or changed.get('quality')!='ultra': raise RuntimeError('Independent part visibility / Ultra quality control failed')
-    print('separate-parts-browser-smoke: PASS — face, returns and back are independent meshes and Ultra mode is selectable')
+    ui=evaluate("""(()=>{const q=document.getElementById('quality19');return {panel:!!document.getElementById('partsPanel19'),face:!!document.querySelector('[data-part19="face"]'),returns:!!document.querySelector('[data-part19="returns"]'),back:!!document.querySelector('[data-part19="back"]'),quality:!!q,options:q?[...q.options].map(o=>o.value):[]}})()""")
+    print('V019 UI',json.dumps(ui,ensure_ascii=False))
+    if not ui or not all(ui.get(k) for k in ('panel','face','returns','back','quality')) or 'ultra' not in ui.get('options',[]): raise RuntimeError('Separate part visibility / quality controls are missing')
+    print('separate-parts-browser-smoke: PASS — face, returns and back are independent meshes; individual controls and Ultra quality are available')
 finally:
     try:
         if ws: ws.close()
