@@ -39,25 +39,28 @@ try:
     ready=False
     for _ in range(90):
         try:
+            state=evaluate("window.__colorizeV030LoadState||'waiting'")
+            if state=='error': break
             ready=bool(evaluate("window.__colorizeAffinity30Debug?.().version==='0.30.0' && document.querySelectorAll('[data-v030-tool]').length>=20"))
             if ready: break
         except Exception: pass
         time.sleep(.15)
-    if not ready: raise RuntimeError('v0.30 editor did not become ready')
+    if not ready:
+        diag=evaluate("(()=>({state:window.__colorizeV030LoadState||null,error:window.__colorizeV030LoadError||null,tools:document.querySelectorAll('[data-v030-tool]').length,affinityBase:!!document.getElementById('affinityTools16'),bodyClass:document.body.className}))()")
+        print('V030 STARTUP DIAGNOSTIC',json.dumps(diag,ensure_ascii=False),flush=True)
+        raise RuntimeError('v0.30 editor did not become ready: '+str(diag))
 
     before=evaluate("(()=>({debug:window.__colorizeAffinity30Debug?.(),toolbar:document.querySelectorAll('[data-v030-tool]').length,shapes:document.querySelectorAll('[data-v030-shape]').length,context:!!document.getElementById('v030ToolContext'),studio:document.querySelectorAll('#v030StudioNav button').length,guard:!!window.__colorizeV030ObserverGuard?.active}))()")
     created=bool(evaluate("!!window.__colorizeAffinity30CreateShape?.('ellipse')"))
     time.sleep(.8)
     vector_before=evaluate("(()=>{const raw=localStorage.getItem('colorize-design-web-v04'),p=raw?JSON.parse(raw):null,a=p?.artboards?.find(x=>x.id===p.activeArtboardId)||p?.artboards?.[0],o=a?.objects?.find(x=>x.id===p.selectedObjectId);return o?{type:o.type,kind:o.vectorKind,fill:o.fill}:null})()")
     svg_before=bool(evaluate("!!document.querySelector('#world .obj.vector .v030-vector-svg')"))
-
     evaluate("window.__colorizeAffinity30Convert?.(); true")
     time.sleep(.8)
     vector_after=evaluate("(()=>{const raw=localStorage.getItem('colorize-design-web-v04'),p=raw?JSON.parse(raw):null,a=p?.artboards?.find(x=>x.id===p.activeArtboardId)||p?.artboards?.[0],o=a?.objects?.find(x=>x.id===p.selectedObjectId);return o?{type:o.type,kind:o.vectorKind,points:o.points?.length||0}:null})()")
     svg_after=bool(evaluate("!!document.querySelector('#world .obj.vector .v030-vector-svg')"))
     result={'before':before,'created':created,'vectorBefore':vector_before,'vectorAfter':vector_after,'svg':svg_before or svg_after}
     print('V030 AFFINITY 2D',json.dumps(result,ensure_ascii=False),flush=True)
-
     debug=(before or {}).get('debug') or {}
     if debug.get('version')!='0.30.0': raise RuntimeError('v0.30 editor did not load')
     if (before or {}).get('toolbar',0)<24: raise RuntimeError('full left tool rail missing')
