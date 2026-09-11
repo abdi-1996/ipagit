@@ -16,12 +16,13 @@
   <link rel="stylesheet" href="./v011.css" />
   <link rel="stylesheet" href="./v012.css" />
   <link rel="stylesheet" href="./v013.css" />
-  <link rel="stylesheet" href="./v014.css?v=0160" />
-  <link rel="stylesheet" href="./v016.css?v=0160" />
+  <link rel="stylesheet" href="./v014.css?v=0170" />
+  <link rel="stylesheet" href="./v016.css?v=0170" />
+  <link rel="stylesheet" href="./v017.css?v=0170" />
   <script type="importmap">
   {
     "imports": {
-      "three": "./three-colorize.js?v=0160",
+      "three": "./three-colorize.js?v=0170",
       "three-core": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
       "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
     }
@@ -31,7 +32,7 @@
 <body>
 <div id="app">
   <header class="topbar">
-    <div class="brand"><strong>COLORIZE<br>DESIGN</strong><span>Web v0.16.0</span></div>
+    <div class="brand"><strong>COLORIZE<br>DESIGN</strong><span>Web v0.17.0</span></div>
     <div class="mode-group" aria-label="Режим отображения">
       <button class="mode active" data-mode="2d">2D</button>
       <button class="mode" data-mode="view3d">3D</button>
@@ -66,9 +67,9 @@
       <div id="threeHost" class="three-host" hidden>
         <div id="threeLoading" class="three-loading">Строим реалистичную 3D-модель…</div>
       </div>
-      <div class="mode-badge" id="modeBadge">2D · редактирование</div>
+      <div class="mode-badge" id="modeBadge">Бесконечная область · см</div>
       <div class="statusbar">
-        <span id="toolStatus">Выбор</span><span id="zoomStatus">100%</span><span id="coordStatus">X 0 · Y 0</span>
+        <span id="toolStatus">Выбор</span><span id="zoomStatus">100%</span><span id="coordStatus">X 0 см · Y 0 см</span>
       </div>
     </main>
 
@@ -89,7 +90,7 @@
       </section>
       <section id="panel-properties" class="panel-body">
         <div class="panel-head"><strong>Свойства вывески</strong></div>
-        <div id="properties" class="properties empty">Выберите текст или Artboard</div>
+        <div id="properties" class="properties empty">Выберите объект</div>
       </section>
       <div class="panel-footer">
         <button id="newProjectBtn">Новый</button>
@@ -107,6 +108,6 @@
     <button id="dockSign"><span class="dock-icon">◆</span><span>Вывеска</span></button>
   </nav>
 </div>
-<script type="module" src="./boot-v016.js?v=0160"></script>
+<script type="module" src="./boot-v017.js?v=0170"></script>
 </body>
 </html>
