@@ -56,6 +56,7 @@ jobs:
           test -s ColorizeDesignWeb/v025-jeksterer-hdri.js
           test -s ColorizeDesignWeb/v0251-hdri-fixed.js
           test -s ColorizeDesignWeb/v027-unified-hdri.js
+          test -s ColorizeDesignWeb/v0271-hdri-passive-mode.js
           test -s ColorizeDesignWeb/assets/hdri/jeksterer23-64-fixed.b64
           test -s ColorizeDesignWeb/tests/history-undo-redo-browser-smoke.py
           test -s ColorizeDesignWeb/tests/lighting-browser-smoke.py
@@ -100,6 +101,7 @@ jobs:
           node --input-type=module --check < ColorizeDesignWeb/v025-jeksterer-hdri.js
           node --input-type=module --check < ColorizeDesignWeb/v0251-hdri-fixed.js
           node --input-type=module --check < ColorizeDesignWeb/v027-unified-hdri.js
+          node --input-type=module --check < ColorizeDesignWeb/v0271-hdri-passive-mode.js
           node --input-type=module --check < ColorizeDesignWeb/boot-v018.js
           node --input-type=module --check < ColorizeDesignWeb/boot-v019.js
           node --input-type=module --check < ColorizeDesignWeb/boot-v020.js
@@ -169,13 +171,13 @@ jobs:
       - name: Package browser build
         run: |
           cd ColorizeDesignWeb
-          zip -qr ../ColorizeDesignWeb-v0.27.0.zip .
+          zip -qr ../ColorizeDesignWeb-v0.27.1.zip .
 
       - name: Upload downloadable build
         uses: actions/upload-artifact@v4
         with:
-          name: ColorizeDesignWeb-v0.27.0
-          path: ColorizeDesignWeb-v0.27.0.zip
+          name: ColorizeDesignWeb-v0.27.1
+          path: ColorizeDesignWeb-v0.27.1.zip
           retention-days: 30
 
       - name: Configure Pages
