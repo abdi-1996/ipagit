@@ -37,7 +37,7 @@ try:
     ready=evaluate("""(async()=>{const w=t=>new Promise(r=>setTimeout(r,t));for(let i=0;i<220;i++){if(document.readyState==='complete'&&typeof window.__colorizeSeparateParts19Debug==='function')break;await w(100)}document.querySelector('.mode[data-mode="view3d"]')?.click();for(let i=0;i<300;i++){const d=window.__colorizeSeparateParts19Debug?.();if(d?.objects>0&&d?.face>0&&d?.returns>0&&d?.back>0&&document.getElementById('threeLoading')?.hidden){await w(500);return d}await w(100)}return null})()""",True)
     if not ready: raise RuntimeError('v0.19 separate-parts engine did not become ready')
     print('V019 DEBUG',json.dumps(ready,ensure_ascii=False))
-    if ready.get('version')!='0.19.0': raise RuntimeError('Wrong separate-parts engine version')
+    if ready.get('version')!='0.19.3': raise RuntimeError('Wrong separate-parts engine version')
     if min(int(ready.get('face') or 0),int(ready.get('returns') or 0),int(ready.get('back') or 0))<1: raise RuntimeError('Face, returns and back were not created separately')
     ui=evaluate("""(()=>{const q=document.getElementById('quality19');return {panel:!!document.getElementById('partsPanel19'),face:!!document.querySelector('[data-part19="face"]'),returns:!!document.querySelector('[data-part19="returns"]'),back:!!document.querySelector('[data-part19="back"]'),quality:!!q,options:q?[...q.options].map(o=>o.value):[]}})()""")
     print('V019 UI',json.dumps(ui,ensure_ascii=False))
