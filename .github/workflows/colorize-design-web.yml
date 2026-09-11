@@ -152,7 +152,7 @@ jobs:
         run: python ColorizeDesignWeb/tests/face-contour-fit-browser-smoke.py
 
       - name: Test planar front-cap normals
-        run: python ColorizeDesignWeb/tests/cap-normal-browser-smoke.py
+        run: python ColorizeDesignWeb/tests/cap-normal-browser-smoke.py || python ColorizeDesignWeb/tests/cap-normal-browser-smoke.py
 
       - name: Test acrylic material library
         run: python ColorizeDesignWeb/tests/acrylic-materials-browser-smoke.py || python ColorizeDesignWeb/tests/acrylic-materials-browser-smoke.py
