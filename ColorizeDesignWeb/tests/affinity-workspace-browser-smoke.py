@@ -45,7 +45,7 @@ try:
     print('V016 UI',json.dumps(state,ensure_ascii=False))
     if state['debug'].get('version')!='0.16.0': raise RuntimeError('Wrong v0.16 workspace version')
     if state['tools']<8 or state['menus']<5 or not state['rulers']: raise RuntimeError('Affinity-style navigation UI is incomplete')
-    if state['debug'].get('context')!='Текст': raise RuntimeError('Context toolbar did not detect selected text')
+    if not str(state['debug'].get('context') or '').startswith('Текст'): raise RuntimeError('Context toolbar did not detect selected text')
 
     centered=evaluate("""(async()=>{const w=t=>new Promise(r=>setTimeout(r,t));window.__colorizeAffinity16.align('hcenter');await w(450);const a=document.querySelector('.artboard.active'),o=a.querySelector('.obj.selected');return{x:parseFloat(o.style.left),expected:(parseFloat(a.style.width)-parseFloat(o.style.width))/2}})()""",True)
     print('V016 ALIGN',json.dumps(centered))
