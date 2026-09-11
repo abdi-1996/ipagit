@@ -98,13 +98,13 @@ jobs:
       - name: Package browser build
         run: |
           cd ColorizeDesignWeb
-          zip -qr ../ColorizeDesignWeb-v0.19.0.zip .
+          zip -qr ../ColorizeDesignWeb-v0.19.1.zip .
 
       - name: Upload downloadable build
         uses: actions/upload-artifact@v4
         with:
-          name: ColorizeDesignWeb-v0.19.0
-          path: ColorizeDesignWeb-v0.19.0.zip
+          name: ColorizeDesignWeb-v0.19.1
+          path: ColorizeDesignWeb-v0.19.1.zip
           retention-days: 30
 
       - name: Configure Pages
