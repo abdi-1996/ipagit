@@ -11,7 +11,6 @@ function hideLegacyTextInput(){
   const row=input?.closest('.prop-row');
   if(row){row.hidden=true;row.dataset.inlineText29Hidden='1'}
 }
-function stripHandles(node){node?.querySelectorAll?.('.resize-handle').forEach(x=>x.remove())}
 function placeCaretEnd(node){
   try{const r=document.createRange(),s=getSelection();r.selectNodeContents(node);r.collapse(false);s.removeAllRanges();s.addRange(r)}catch{}
 }
@@ -22,8 +21,10 @@ function start(node=selectedNode()){
   if(editing?.node===node)return true;
   if(editing)commit();
   hideLegacyTextInput();
-  stripHandles(node);
-  const original=node.textContent||node.dataset.text||'';
+  // dataset.text is the real inscription. Selected-object handles may be children
+  // of the node, so never derive editable text from node.textContent.
+  const original=node.dataset.text||'';
+  node.replaceChildren(document.createTextNode(original));
   editing={node,id:node.dataset.objectId,original,composing:false};
   node.classList.add('colorize-inline-editing29');
   node.contentEditable='plaintext-only';
@@ -56,13 +57,11 @@ function commit(){
 
 function objectFromEvent(e){const n=e.target?.closest?.('#world .obj.text[data-object-id]');return n||null}
 
-// Desktop: double click directly on the lettering.
 document.addEventListener('dblclick',e=>{
   const n=objectFromEvent(e);if(!n)return;
   e.preventDefault();e.stopPropagation();start(n);
 },true);
 
-// iPhone/iPad: reliable double tap independent of browser dblclick synthesis.
 document.addEventListener('pointerup',e=>{
   if(e.pointerType!=='touch'||editing)return;
   const n=objectFromEvent(e);if(!n)return;
@@ -71,7 +70,6 @@ document.addEventListener('pointerup',e=>{
   else lastTouch={id,time:now};
 },true);
 
-// While editing, the canvas must not start drag/resize/pan gestures.
 document.addEventListener('pointerdown',e=>{
   if(editing&&e.target?.closest?.('.colorize-inline-editing29'))e.stopImmediatePropagation();
 },true);
@@ -90,7 +88,6 @@ document.addEventListener('compositionstart',e=>{if(editing&&e.target===editing.
 document.addEventListener('compositionend',e=>{if(editing&&e.target===editing.node)editing.composing=false},true);
 document.addEventListener('focusout',e=>{if(editing&&e.target===editing.node)setTimeout(()=>{if(editing&&document.activeElement!==editing.node)commit()},0)},true);
 
-// Newly inserted text starts editing immediately, so the user never has to visit the panel.
 for(const id of ['addTextBtn','dockText'])document.getElementById(id)?.addEventListener('click',()=>requestAnimationFrame(()=>requestAnimationFrame(()=>start(selectedNode()))));
 
 const style=document.createElement('style');style.id='inlineText29Style';style.textContent=`
