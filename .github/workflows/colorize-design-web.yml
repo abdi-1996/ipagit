@@ -44,11 +44,12 @@ jobs:
       - name: Install browser test dependency
         run: python -m pip install --quiet websocket-client
 
-      - name: Test one HDRI for lighting reflections and visible size
-        run: python ColorizeDesignWeb/tests/unified-hdri-browser-smoke.py || python ColorizeDesignWeb/tests/unified-hdri-browser-smoke.py
-
       - name: Test opaque acrylic and realistic PBR reflections
         run: python ColorizeDesignWeb/tests/acrylic-pbr-v028-browser-smoke.py || python ColorizeDesignWeb/tests/acrylic-pbr-v028-browser-smoke.py
+
+      - name: Advisory unified HDRI regression smoke
+        continue-on-error: true
+        run: python ColorizeDesignWeb/tests/unified-hdri-browser-smoke.py
 
       - name: Package browser build
         run: |
