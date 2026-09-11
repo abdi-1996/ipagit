@@ -52,7 +52,8 @@ jobs:
           test -s ColorizeDesignWeb/v023-face-contour-fit.js
           test -s ColorizeDesignWeb/v024-hdri-studio.js
           test -s ColorizeDesignWeb/v025-jeksterer-hdri.js
-          test -s ColorizeDesignWeb/assets/hdri/jeksterer23-128.part1.b64
+          test -s ColorizeDesignWeb/assets/hdri/jeksterer23-128.part1a.b64
+          test -s ColorizeDesignWeb/assets/hdri/jeksterer23-128.part1b.b64
           test -s ColorizeDesignWeb/assets/hdri/jeksterer23-128.part2a.b64
           test -s ColorizeDesignWeb/assets/hdri/jeksterer23-128.part2b.b64
           test -s ColorizeDesignWeb/assets/hdri/jeksterer23-128.part3.b64
@@ -69,7 +70,7 @@ jobs:
           test -s ColorizeDesignWeb/tests/face-contour-fit-browser-smoke.py
           test -s ColorizeDesignWeb/tests/affinity-workspace-browser-smoke.py
           test -s ColorizeDesignWeb/tests/infinite-workspace-browser-smoke.py
-          cat ColorizeDesignWeb/assets/hdri/jeksterer23-128.part1.b64 ColorizeDesignWeb/assets/hdri/jeksterer23-128.part2a.b64 ColorizeDesignWeb/assets/hdri/jeksterer23-128.part2b.b64 ColorizeDesignWeb/assets/hdri/jeksterer23-128.part3.b64 | tr -d '\n\r ' | base64 -d > /tmp/jeksterer23.hdr
+          cat ColorizeDesignWeb/assets/hdri/jeksterer23-128.part1a.b64 ColorizeDesignWeb/assets/hdri/jeksterer23-128.part1b.b64 ColorizeDesignWeb/assets/hdri/jeksterer23-128.part2a.b64 ColorizeDesignWeb/assets/hdri/jeksterer23-128.part2b.b64 ColorizeDesignWeb/assets/hdri/jeksterer23-128.part3.b64 | tr -d '\n\r ' | base64 -d > /tmp/jeksterer23.hdr
           test "$(wc -c < /tmp/jeksterer23.hdr)" -gt 25000
           head -c 16 /tmp/jeksterer23.hdr | grep -q '#?RADIANCE'
           grep -a -q -- '-Y 64 +X 128' /tmp/jeksterer23.hdr
