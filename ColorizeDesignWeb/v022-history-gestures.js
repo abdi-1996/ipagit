@@ -9,7 +9,7 @@ const COMMIT_DELAY=240;
 const nativeSetItem=Storage.prototype.setItem;
 
 let pending=null,commitTimer=0,internalWrite=false;
-let touchGesture=null;
+let touchGesture=null,lastInputCapture=0;
 let lastTap={fingers:0,time:0,x:0,y:0};
 
 function loadState(){
@@ -19,9 +19,7 @@ function loadState(){
   }catch{}
   return {version:1,items:[],index:-1,undoCount:0,redoCount:0,lastAction:null};
 }
-function saveState(s){
-  try{sessionStorage.setItem(SESSION_KEY,JSON.stringify(s))}catch{}
-}
+function saveState(s){try{sessionStorage.setItem(SESSION_KEY,JSON.stringify(s))}catch{}}
 function currentRaw(){try{return localStorage.getItem(PROJECT_KEY)}catch{return null}}
 function normalizeState(){
   const s=loadState(),raw=currentRaw();
@@ -55,6 +53,18 @@ Storage.prototype.setItem=function(key,value){
   if(this===localStorage&&key===PROJECT_KEY&&!internalWrite)scheduleCommit(value);
   return out;
 };
+
+// Freeze any pending automatic save before a new user edit starts. This keeps
+// Undo anchored to exactly what the user saw before the edit, while still
+// grouping continuous typing / slider input into one history step.
+document.addEventListener('input',()=>{
+  const now=performance.now();
+  if(pending&&now-lastInputCapture>520)flushPending();
+  lastInputCapture=now;
+},{capture:true});
+document.addEventListener('pointerdown',()=>{if(pending)flushPending()},{capture:true,passive:true});
+
+document.addEventListener('change',()=>{if(pending)flushPending()},{capture:true});
 
 function toast(text){
   let el=document.getElementById('historyToast22');
@@ -130,17 +140,14 @@ document.addEventListener('keydown',e=>{
 
 function ensureBaseline(){
   let raw=currentRaw();
-  if(!raw){
-    document.getElementById('saveBtn')?.click();raw=currentRaw();
-  }
+  if(!raw){document.getElementById('saveBtn')?.click();raw=currentRaw()}
   if(raw){pending=null;clearTimeout(commitTimer);commitRaw(raw)}
   normalizeState();
   try{const t=sessionStorage.getItem(TOAST_KEY);if(t){sessionStorage.removeItem(TOAST_KEY);setTimeout(()=>toast(t),80)}}catch{}
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ensureBaseline,{once:true});else ensureBaseline();
 
-// Public commands are also useful for future toolbar buttons and automated tests.
 globalThis.__colorizeUndo=()=>undo('api');
 globalThis.__colorizeRedo=()=>redo('api');
 globalThis.__colorizeHistory22SimulateGesture=(fingers)=>{registerTap(fingers,100,100,'gesture-test');return registerTap(fingers,100,100,'gesture-test')};
-globalThis.__colorizeHistory22Debug=()=>{flushPending();const s=loadState();return{version:'0.22.0',length:s.items.length,index:s.index,canUndo:s.index>0,canRedo:s.index>=0&&s.index<s.items.length-1,undoCount:s.undoCount||0,redoCount:s.redoCount||0,lastAction:s.lastAction}};
+globalThis.__colorizeHistory22Debug=()=>{const s=loadState();return{version:'0.22.0',length:s.items.length,index:s.index,canUndo:s.index>0,canRedo:s.index>=0&&s.index<s.items.length-1,undoCount:s.undoCount||0,redoCount:s.redoCount||0,lastAction:s.lastAction,pending:!!pending}};
