@@ -31,9 +31,17 @@ try:
                 return m.get('result',{})
     call('Runtime.enable');call('Page.enable')
     def evaluate(expr,await_promise=False):
-        r=call('Runtime.evaluate',{'expression':expr,'returnByValue':True,'awaitPromise':await_promise})
-        if r.get('exceptionDetails'): raise RuntimeError('JS exception '+json.dumps(r['exceptionDetails']))
-        return r.get('result',{}).get('value')
+        last=None
+        for _ in range(20):
+            try:
+                r=call('Runtime.evaluate',{'expression':expr,'returnByValue':True,'awaitPromise':await_promise})
+                if r.get('exceptionDetails'): raise RuntimeError('JS exception '+json.dumps(r['exceptionDetails']))
+                return r.get('result',{}).get('value')
+            except RuntimeError as e:
+                last=e
+                if 'Execution context was destroyed' not in str(e): raise
+                time.sleep(.25)
+        raise last
     ready=evaluate("""(async()=>{const w=t=>new Promise(r=>setTimeout(r,t));for(let i=0;i<240;i++){if(document.readyState==='complete'&&typeof window.__colorizeHdriStudio24Debug==='function')break;await w(100)}document.querySelector('.mode[data-mode="view3d"]')?.click();for(let i=0;i<320;i++){const d=window.__colorizeHdriStudio24Debug?.();if(d?.version==='0.24.0'&&document.getElementById('hdriModeBtn24')&&document.getElementById('hdriUpload24')){await w(350);return d}await w(100)}return null})()""",True)
     if not ready: raise RuntimeError('HDRI Studio v0.24 did not become ready')
     ui=evaluate("""(()=>{const u=document.getElementById('hdriUpload24');return {panel:!!document.querySelector('.hdri-studio24'),button:!!document.getElementById('hdriModeBtn24'),upload:!!u,accept:u?.accept||'',tilt:!!document.getElementById('hdriTilt24'),reflect:!!document.getElementById('hdriReflect24'),bg:!!document.getElementById('hdriBackground24')}})()""")
