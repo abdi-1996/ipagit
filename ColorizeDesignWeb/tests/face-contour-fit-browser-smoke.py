@@ -38,7 +38,8 @@ try:
     print('V023 FACE FIT',json.dumps(result,ensure_ascii=False))
     if not result or result.get('version')!='0.23.0': raise RuntimeError('v0.23 face contour module did not load')
     if int(result.get('corrected') or 0)<1: raise RuntimeError('No front face was corrected')
-    if float(result.get('maxDelta') or 999)>0.00002: raise RuntimeError('Front face still exceeds returns/back XY contour')
+    max_delta=result.get('maxDelta')
+    if max_delta is None or float(max_delta)>0.00002: raise RuntimeError('Front face still exceeds returns/back XY contour')
     last=result.get('last') or {}
     for a,b in [('faceW','returnsW'),('faceH','returnsH'),('faceW','backW'),('faceH','backH')]:
         if abs(float(last.get(a,0))-float(last.get(b,0)))>0.00002: raise RuntimeError(f'Contour mismatch: {a} != {b}')
