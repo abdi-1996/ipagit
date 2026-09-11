@@ -39,7 +39,7 @@ try:
     required=['acrylic-clear','acrylic-opal','acrylic-white','acrylic-colored-clear','acrylic-colored-opal','acrylic-satin','acrylic-gloss','acrylic-mirror-gold','acrylic-mirror-silver','acrylic-fluorescent','acrylic-edge-lit','acrylic-led-diffuser','acrylic-impact','acrylic-cast','acrylic-extruded']
     missing=[k for k in required if k not in ready['d'].get('profiles',[]) or k not in ready.get('opts',[])]
     if missing: raise RuntimeError('Missing acrylic profiles/options: '+','.join(missing))
-    applied=evaluate("""(async()=>{const w=t=>new Promise(r=>setTimeout(r,t));const s=document.querySelector('select[data-prop="faceMaterial"]');s.value='acrylic-mirror-gold';s.dispatchEvent(new Event('change',{bubbles:true}));await w(250);document.querySelector('.mode[data-mode="view3d"]')?.click();for(let i=0;i<260;i++){const d=window.__colorizeAcrylic20Debug?.();if(d?.last?.key==='acrylic-mirror-gold'&&d.applied>0)return d;await w(100)}return null})()""",True)
+    applied=evaluate("""(async()=>{const w=t=>new Promise(r=>setTimeout(r,t));const s=document.querySelector('select[data-prop="faceMaterial"]');s.value='acrylic-mirror-gold';s.dispatchEvent(new Event('input',{bubbles:true}));await w(350);document.querySelector('.mode[data-mode="view3d"]')?.click();for(let i=0;i<260;i++){const d=window.__colorizeAcrylic20Debug?.();if(d?.last?.key==='acrylic-mirror-gold'&&d.applied>0)return d;await w(100)}return null})()""",True)
     if not applied: raise RuntimeError('Mirror Gold acrylic was not applied to the 3D mesh')
     print('V020 ACRYLIC',json.dumps(applied,ensure_ascii=False))
     print('acrylic-materials-browser-smoke: PASS — 15 acrylic presets are available and a selected preset is applied to the separate 3D face mesh')
