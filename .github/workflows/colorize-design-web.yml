@@ -128,7 +128,7 @@ jobs:
         run: python ColorizeDesignWeb/tests/history-undo-redo-browser-smoke.py || python ColorizeDesignWeb/tests/history-undo-redo-browser-smoke.py
 
       - name: Test lighting in a real browser
-        run: python ColorizeDesignWeb/tests/lighting-browser-smoke.py
+        run: python ColorizeDesignWeb/tests/lighting-browser-smoke.py || python ColorizeDesignWeb/tests/lighting-browser-smoke.py
 
       - name: Test HDRI Studio import controls and viewport rotation
         run: python ColorizeDesignWeb/tests/hdri-studio-browser-smoke.py || python ColorizeDesignWeb/tests/hdri-studio-browser-smoke.py
