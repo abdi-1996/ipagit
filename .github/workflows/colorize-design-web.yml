@@ -37,6 +37,7 @@ jobs:
           test -s ColorizeDesignWeb/boot-v023.js
           test -s ColorizeDesignWeb/boot-v024.js
           test -s ColorizeDesignWeb/boot-v025.js
+          test -s ColorizeDesignWeb/boot-v0251.js
           test -s ColorizeDesignWeb/v0135-lighting-engine.js
           test -s ColorizeDesignWeb/v0135-lighting-ui-bridge.js
           test -s ColorizeDesignWeb/v014-assembled-signs.js
@@ -52,15 +53,12 @@ jobs:
           test -s ColorizeDesignWeb/v023-face-contour-fit.js
           test -s ColorizeDesignWeb/v024-hdri-studio.js
           test -s ColorizeDesignWeb/v025-jeksterer-hdri.js
-          test -s ColorizeDesignWeb/assets/hdri/jeksterer23-128.part1a.b64
-          test -s ColorizeDesignWeb/assets/hdri/jeksterer23-128.part1b.b64
-          test -s ColorizeDesignWeb/assets/hdri/jeksterer23-128.part2a.b64
-          test -s ColorizeDesignWeb/assets/hdri/jeksterer23-128.part2b.b64
-          test -s ColorizeDesignWeb/assets/hdri/jeksterer23-128.part3.b64
+          test -s ColorizeDesignWeb/v0251-hdri-fixed.js
+          test -s ColorizeDesignWeb/assets/hdri/jeksterer23-64-fixed.b64
           test -s ColorizeDesignWeb/tests/history-undo-redo-browser-smoke.py
           test -s ColorizeDesignWeb/tests/lighting-browser-smoke.py
           test -s ColorizeDesignWeb/tests/hdri-studio-browser-smoke.py
-          test -s ColorizeDesignWeb/tests/jeksterer-hdri-browser-smoke.py
+          test -s ColorizeDesignWeb/tests/jeksterer-hdri-fixed-browser-smoke.py
           test -s ColorizeDesignWeb/tests/assembled-sign-browser-smoke.py
           test -s ColorizeDesignWeb/tests/true-assembly-browser-smoke.py
           test -s ColorizeDesignWeb/tests/separate-parts-browser-smoke.py
@@ -70,10 +68,10 @@ jobs:
           test -s ColorizeDesignWeb/tests/face-contour-fit-browser-smoke.py
           test -s ColorizeDesignWeb/tests/affinity-workspace-browser-smoke.py
           test -s ColorizeDesignWeb/tests/infinite-workspace-browser-smoke.py
-          cat ColorizeDesignWeb/assets/hdri/jeksterer23-128.part1a.b64 ColorizeDesignWeb/assets/hdri/jeksterer23-128.part1b.b64 ColorizeDesignWeb/assets/hdri/jeksterer23-128.part2a.b64 ColorizeDesignWeb/assets/hdri/jeksterer23-128.part2b.b64 ColorizeDesignWeb/assets/hdri/jeksterer23-128.part3.b64 | tr -d '\n\r ' | base64 -d > /tmp/jeksterer23.hdr
-          test "$(wc -c < /tmp/jeksterer23.hdr)" -gt 25000
-          head -c 16 /tmp/jeksterer23.hdr | grep -q '#?RADIANCE'
-          grep -a -q -- '-Y 64 +X 128' /tmp/jeksterer23.hdr
+          cat ColorizeDesignWeb/assets/hdri/jeksterer23-64-fixed.b64 | tr -d '\n\r ' | base64 -d > /tmp/jeksterer23-fixed.hdr
+          test "$(wc -c < /tmp/jeksterer23-fixed.hdr)" -gt 6000
+          head -c 16 /tmp/jeksterer23-fixed.hdr | grep -q '#?RADIANCE'
+          grep -a -q -- '-Y 32 +X 64' /tmp/jeksterer23-fixed.hdr
           node --input-type=module --check < ColorizeDesignWeb/three-colorize.js
           node --input-type=module --check < ColorizeDesignWeb/app.js
           node --input-type=module --check < ColorizeDesignWeb/v011-realtime-3d.js
@@ -97,6 +95,7 @@ jobs:
           node --input-type=module --check < ColorizeDesignWeb/v023-face-contour-fit.js
           node --input-type=module --check < ColorizeDesignWeb/v024-hdri-studio.js
           node --input-type=module --check < ColorizeDesignWeb/v025-jeksterer-hdri.js
+          node --input-type=module --check < ColorizeDesignWeb/v0251-hdri-fixed.js
           node --input-type=module --check < ColorizeDesignWeb/boot-v018.js
           node --input-type=module --check < ColorizeDesignWeb/boot-v019.js
           node --input-type=module --check < ColorizeDesignWeb/boot-v020.js
@@ -105,10 +104,11 @@ jobs:
           node --input-type=module --check < ColorizeDesignWeb/boot-v023.js
           node --input-type=module --check < ColorizeDesignWeb/boot-v024.js
           node --input-type=module --check < ColorizeDesignWeb/boot-v025.js
+          node --input-type=module --check < ColorizeDesignWeb/boot-v0251.js
           node --input-type=module --check < ColorizeDesignWeb/facade.js
           python -m py_compile ColorizeDesignWeb/tests/history-undo-redo-browser-smoke.py
           python -m py_compile ColorizeDesignWeb/tests/hdri-studio-browser-smoke.py
-          python -m py_compile ColorizeDesignWeb/tests/jeksterer-hdri-browser-smoke.py
+          python -m py_compile ColorizeDesignWeb/tests/jeksterer-hdri-fixed-browser-smoke.py
           python -m py_compile ColorizeDesignWeb/tests/separate-parts-browser-smoke.py
           python -m py_compile ColorizeDesignWeb/tests/cap-normal-browser-smoke.py
           python -m py_compile ColorizeDesignWeb/tests/acrylic-materials-browser-smoke.py
@@ -127,8 +127,8 @@ jobs:
       - name: Test HDRI Studio import controls and viewport rotation
         run: python ColorizeDesignWeb/tests/hdri-studio-browser-smoke.py
 
-      - name: Test built-in Jeksterer HDRI and reliable import
-        run: python ColorizeDesignWeb/tests/jeksterer-hdri-browser-smoke.py
+      - name: Test fixed built-in Jeksterer HDRI and iOS import
+        run: python ColorizeDesignWeb/tests/jeksterer-hdri-fixed-browser-smoke.py
 
       - name: Test assembled materials in a real browser
         run: python ColorizeDesignWeb/tests/assembled-sign-browser-smoke.py
@@ -160,13 +160,13 @@ jobs:
       - name: Package browser build
         run: |
           cd ColorizeDesignWeb
-          zip -qr ../ColorizeDesignWeb-v0.25.0.zip .
+          zip -qr ../ColorizeDesignWeb-v0.25.1.zip .
 
       - name: Upload downloadable build
         uses: actions/upload-artifact@v4
         with:
-          name: ColorizeDesignWeb-v0.25.0
-          path: ColorizeDesignWeb-v0.25.0.zip
+          name: ColorizeDesignWeb-v0.25.1
+          path: ColorizeDesignWeb-v0.25.1.zip
           retention-days: 30
 
       - name: Configure Pages
