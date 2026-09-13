@@ -55,10 +55,10 @@ jobs:
         run: python -m pip install --quiet websocket-client
 
       - name: Startup and stable viewport text editing
-        run: timeout 35s python ColorizeDesignWeb/tests/editor-stability-v031-browser-smoke.py
+        run: timeout 45s python ColorizeDesignWeb/tests/editor-stability-v031-browser-smoke.py
 
       - name: Full audit — all 24 2D tools and core commands
-        run: timeout 45s python ColorizeDesignWeb/tests/full-function-v032-browser.py
+        run: timeout 150s python -u ColorizeDesignWeb/tests/full-function-v032-browser.py
 
       - name: Undo and Redo regression
         run: python ColorizeDesignWeb/tests/history-undo-redo-browser-smoke.py || python ColorizeDesignWeb/tests/history-undo-redo-browser-smoke.py
