@@ -35,12 +35,14 @@ jobs:
           test -s ColorizeDesignWeb/v031-tool-stability.js
           test -s ColorizeDesignWeb/v030-affinity-2d.js
           test -s ColorizeDesignWeb/v030.css
+          test -s ColorizeDesignWeb/tests/desktop-startup-v032-browser.py
           test -s ColorizeDesignWeb/tests/full-function-v032-browser.py
           node --input-type=module --check < ColorizeDesignWeb/v032-function-fixes.js
           node --input-type=module --check < ColorizeDesignWeb/boot-v032.js
           node --input-type=module --check < ColorizeDesignWeb/v031-text-editor.js
           node --input-type=module --check < ColorizeDesignWeb/v031-tool-stability.js
           node --input-type=module --check < ColorizeDesignWeb/v030-affinity-2d.js
+          python -m py_compile ColorizeDesignWeb/tests/desktop-startup-v032-browser.py
           python -m py_compile ColorizeDesignWeb/tests/full-function-v032-browser.py
           python -m py_compile ColorizeDesignWeb/tests/editor-stability-v031-browser-smoke.py
           python -m py_compile ColorizeDesignWeb/tests/history-undo-redo-browser-smoke.py
@@ -56,6 +58,9 @@ jobs:
 
       - name: Startup and stable viewport text editing
         run: timeout 45s python ColorizeDesignWeb/tests/editor-stability-v031-browser-smoke.py
+
+      - name: Desktop viewport responsiveness
+        run: timeout 50s python -u ColorizeDesignWeb/tests/desktop-startup-v032-browser.py
 
       - name: Full audit — all 24 2D tools and core commands
         run: |
