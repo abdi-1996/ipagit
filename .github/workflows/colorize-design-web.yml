@@ -58,7 +58,15 @@ jobs:
         run: timeout 45s python ColorizeDesignWeb/tests/editor-stability-v031-browser-smoke.py
 
       - name: Full audit — all 24 2D tools and core commands
-        run: timeout 150s python -u ColorizeDesignWeb/tests/full-function-v032-browser.py
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('ColorizeDesignWeb/tests/full-function-v032-browser.py')
+          s=p.read_text()
+          s=s.replace("websocket.create_connection(page['webSocketDebuggerUrl'],timeout=20)","websocket.create_connection(page['webSocketDebuggerUrl'],timeout=2)")
+          p.write_text(s)
+          PY
+          timeout 150s python -u ColorizeDesignWeb/tests/full-function-v032-browser.py
 
       - name: Undo and Redo regression
         run: python ColorizeDesignWeb/tests/history-undo-redo-browser-smoke.py || python ColorizeDesignWeb/tests/history-undo-redo-browser-smoke.py
