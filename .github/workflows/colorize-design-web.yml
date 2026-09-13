@@ -55,7 +55,7 @@ jobs:
         run: python -m pip install --quiet websocket-client
 
       - name: Full audit — all 24 2D tools and core commands
-        run: python ColorizeDesignWeb/tests/full-function-v032-browser.py || python ColorizeDesignWeb/tests/full-function-v032-browser.py
+        run: timeout 75s python ColorizeDesignWeb/tests/full-function-v032-browser.py
 
       - name: Stable viewport text editing
         run: python ColorizeDesignWeb/tests/editor-stability-v031-browser-smoke.py || python ColorizeDesignWeb/tests/editor-stability-v031-browser-smoke.py
