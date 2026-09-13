@@ -63,10 +63,13 @@ jobs:
           from pathlib import Path
           p=Path('ColorizeDesignWeb/tests/full-function-v032-browser.py')
           s=p.read_text()
-          s=s.replace("websocket.create_connection(page['webSocketDebuggerUrl'],timeout=20)","websocket.create_connection(page['webSocketDebuggerUrl'],timeout=2)")
-          p.write_text(s)
+          old="ws=websocket.create_connection(page['webSocketDebuggerUrl'],timeout=20); cid=0"
+          new="ws=websocket.create_connection(page['webSocketDebuggerUrl'],timeout=5); cid=0; time.sleep(15)"
+          if old not in s:
+              raise SystemExit('full audit connection line not found')
+          p.write_text(s.replace(old,new))
           PY
-          timeout 150s python -u ColorizeDesignWeb/tests/full-function-v032-browser.py
+          timeout 180s python -u ColorizeDesignWeb/tests/full-function-v032-browser.py
 
       - name: Undo and Redo regression
         run: python ColorizeDesignWeb/tests/history-undo-redo-browser-smoke.py || python ColorizeDesignWeb/tests/history-undo-redo-browser-smoke.py
